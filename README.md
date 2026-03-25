@@ -1,79 +1,96 @@
-# JARVIS
+# JARVIS CLI
 
-Tools for life hack — a CLI built with Typer for automation and productivity.
+JARVIS (Tools for Life Hack) - A powerful CLI built with Python and Typer for system automation, database management, and application maintenance.
 
-**Version:** v0.6.1
+**Version:** v0.16.0
 
-## Installation
+## 🚀 Installation
 
-### Download latest release (recommended)
+### 1. Download latest release (Recommended)
+
+You can download the latest pre-built executable for Linux (Ubuntu 22.04+/Debian) directly from GitHub:
 
 ```bash
 mkdir -p ~/.local/bin
-curl -L https://git.punsarn.com/apirak/jarvis/-/raw/main/jarvis \
+# Download from GitHub Releases
+curl -L https://github.com/pigdome/jarvis/releases/latest/download/jarvis \
   -o ~/.local/bin/jarvis && chmod +x ~/.local/bin/jarvis
 ```
 
-### Build from source
+Make sure `~/.local/bin` is in your `$PATH`.
+
+### 2. Build from source
+
+Requires Python 3.12+.
 
 ```bash
-git clone https://git.punsarn.com/apirak/jarvis.git jarvis
+git clone https://github.com/pigdome/jarvis.git
 cd jarvis
 bash build.sh
 ```
 
-During build, you will be prompted to:
-1. Bump the version (patch / minor / major / no change)
-2. Create a git tag and push to GitLab (triggers CI to build and publish a release)
-3. Install the binary to `~/.local/bin/jarvis`
+---
 
-## Usage
+## 📖 Usage
 
-```
-jarvis [COMMAND] [SUBCOMMAND] [OPTIONS]
+```bash
+jarvis [CATEGORY] [COMMAND] [OPTIONS]
 ```
 
-```
-jarvis help      # Show all commands in a tree view
-jarvis version   # Show current version
+To see the full command structure:
+```bash
+jarvis help
 ```
 
-## Commands
+---
+
+## 🛠️ Categories & Commands
+
+### 🚀 app — Applications & Services
+Specific maintenance commands for library and repository systems.
+
+| Command | Description |
+|---|---|
+| `jarvis app koha stats [DB]` | Show Koha database statistics (Biblios, Items, Issues) |
+| `jarvis app dspace init-db` | Create DSpace user and database in PostgreSQL |
+| `jarvis app dspace stats [DB]` | Show DSpace database statistics (Items, Collections) |
+
+### 🗄️ db — Database Utilities
+Direct database access and maintenance. Now supports passwordless access via `sudo`.
+
+| Command | Description |
+|---|---|
+| `jarvis db mysql` | Open MySQL client using `debian.cnf` (root) |
+| `jarvis db psql` | Open PostgreSQL client as `postgres` user |
+| `jarvis db pg-restore DB FILE` | Drop, Create, and Restore Postgres from `.sql.gz` dump |
+| `jarvis db pg-dump DB` | Dump a PostgreSQL database |
+| `jarvis db mysqldump DB` | Dump a MySQL database |
+
+### 🏗️ sys — Infrastructure & System
+System-level management and setup.
+
+| Command | Description |
+|---|---|
+| `jarvis sys init` | **Root only.** Full server setup (Apt, TZ, Locales, SSH Hardening) |
+| `jarvis sys update` | Run system update (apt update/upgrade/clean/autoremove) |
+| `jarvis sys adduser NAME` | Add a new user with sudo/ssh-key options |
+| `jarvis sys clean-pc` | Run system cleanup (apt cleanup) |
+| `jarvis sys upload FILE` | Upload a file to a transfer service for easy sharing |
 
 ### 🌐 net — Network & Security
+Network tools and VPN management.
 
 | Command | Description |
 |---|---|
 | `jarvis net vpn [NAME]` | Connect to a VPN server (reads from `secrets.json`) |
-| `jarvis net speedtest` | Run a speed test (standard) |
-| `jarvis net fast` | Run a fast.com speed test (Go binary) |
+| `jarvis net speedtest` | Run a speed test (using `speedtest-cli`) |
+| `jarvis net fast` | Run a fast.com speed test |
 
-### 🏗️ sys — System & Infrastructure
+---
 
-| Command | Description |
-|---|---|
-| `jarvis sys adduser NICKNAME [--sudo] [--authkeys]` | Add a user from predefined nicknames |
-| `jarvis sys clean-pc` | Run the Ubuntu system cleaner script |
-| `jarvis sys setup-vim` | Link `.vimrc` from jarvis config |
-| `jarvis sys deploy` | Run full JARVIS deployment/setup |
-| `jarvis sys upload FILE [--host HOST]` | Upload a file to a transfer service |
-| `jarvis sys keepass` | Open KeePass database with kpcli |
-| `jarvis sys update` | Run apt update / upgrade / clean / autoremove |
+## ⚙️ Configuration
 
-### 🗄️ db — Database Utilities
-
-| Command | Description |
-|---|---|
-| `jarvis db mysql` | Open MySQL client |
-| `jarvis db psql` | Open PostgreSQL client |
-| `jarvis db koha-dump INSTANCE` | Dump Koha database |
-| `jarvis db koha-dump-fast INSTANCE` | Dump Koha database (fast method) |
-| `jarvis db koha-info INSTANCE` | Show Koha instance info |
-| `jarvis db koha-set-url INSTANCE URL` | Set Koha instance URL |
-
-## Configuration
-
-VPN credentials are stored in `secrets.json` at the project root:
+VPN credentials and other secrets are managed in `~/.jarvis/secrets.json` (or bundled during build).
 
 ```json
 {
@@ -82,20 +99,18 @@ VPN credentials are stored in `secrets.json` at the project root:
       "protocol": "anyconnect",
       "url": "vpn.example.com",
       "user": "username",
-      "pass": "password",
-      "cert": "hash:XXXXXX",
-      "group": "group-name"
+      "pass": "password"
     }
   }
 }
 ```
 
-## Build from source
+---
 
-Requires Python 3.12+ and a virtual environment at `venv/` or `.venv/`.
+## 🏗️ Build System
 
-```bash
-bash build.sh
-```
+The project uses **PyInstaller** to produce a standalone binary.
+Custom bash scripts (`scripts/legacy`) have been fully migrated to Python modules located in `src/jarvis/commands/`.
 
-The build uses PyInstaller to produce a single executable at `dist/jarvis`.
+---
+© 2026 Punsarn.asia
