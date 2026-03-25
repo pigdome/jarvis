@@ -5,7 +5,7 @@ import sys
 import shutil
 from pathlib import Path
 from typing import Optional
-from jarvis.config import get_secrets, save_secrets, LEGACY_DIR, JARVIS_ROOT, CONFIG_DIR, BIN_DIR
+from jarvis.config import get_secrets, save_secrets, JARVIS_ROOT, CONFIG_DIR, BIN_DIR # Removed unused LEGACY_DIR
 
 app = typer.Typer(
     help="Self-management and JARVIS setup commands",
@@ -87,3 +87,58 @@ def deploy():
     sync_ssh_keys()
 
     print("\n✨ Deployment complete!")
+@app.command()
+def update():
+    """
+    Check for and install the latest version of JARVIS from GitHub.
+    """
+    from rich.console import Console
+    console = Console()
+    
+    # Detect the current executable path
+    if getattr(sys, 'frozen', False):
+        current_exe = Path(sys.executable).resolve()
+    else:
+        # Fallback for development mode
+        console.print("[yellow]⚠️  Running in development mode. Update will replace the binary in ~/.local/bin/jarvis if it exists.[/yellow]")
+        current_exe = Path.home() / ".local/bin/jarvis"
+        if not current_exe.exists():
+            console.print("[red]❌ Error: Cannot find binary to update in development mode.[/red]")
+            return
+            
+    console.print(f"🚀 [bold blue]Updating JARVIS at:[/bold blue] [bold yellow]{current_exe}[/bold yellow]")
+    
+    tmp_file = "/tmp/jarvis.tar.gz"
+    repo_url = "https://github.com/pigdome/jarvis/releases/latest/download/jarvis.tar.gz"
+    
+    try:
+        console.print(f"📥 Downloading latest version from [cyan]{repo_url}[/cyan]...")
+        subprocess.run(["curl", "-L", repo_url, "-o", tmp_file], check=True)
+        
+        console.print("📦 Extracting binary...")
+        # Extract jarvis from the tarball into /tmp
+        subprocess.run(["tar", "-xzf", tmp_file, "-C", "/tmp", "jarvis"], check=True)
+        
+        new_exe = Path("/tmp/jarvis")
+        if not new_exe.exists():
+            console.print("[red]❌ Error: Extracted binary not found in tarball.[/red]")
+            return
+
+        console.print("🔄 Replacing current binary...")
+        # Use shutil.copy2 to preserve permissions
+        # On Linux, we can overwrite a running binary if we have permissions
+        shutil.copy2(new_exe, current_exe)
+        os.chmod(current_exe, 0o755)
+        
+        console.print("\n✨ [bold green]JARVIS has been successfully updated to the latest version![/bold green]")
+        
+    except subprocess.CalledProcessError:
+        console.print("[red]❌ Error: Failed to download or extract the latest version.[/red]")
+    except PermissionError:
+        console.print("[red]❌ Error: Permission denied. Try running with sudo if necessary.[/red]")
+    except Exception as e:
+        console.print(f"[red]❌ Update failed: {e}[/red]")
+    finally:
+        # Cleanup
+        if os.path.exists(tmp_file): os.remove(tmp_file)
+        if os.path.exists("/tmp/jarvis"): os.remove("/tmp/jarvis")
