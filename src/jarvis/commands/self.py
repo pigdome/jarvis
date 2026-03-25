@@ -131,8 +131,13 @@ def update():
             return
 
         console.print("🔄 Replacing current binary...")
+        # On Linux, you cannot overwrite a running binary ([Errno 26] Text file busy).
+        # But you CAN unlink (delete) or rename it. Unlinking allows us to 
+        # put the new binary in its place.
+        if current_exe.exists():
+            current_exe.unlink()
+
         # Use shutil.copy2 to preserve permissions
-        # On Linux, we can overwrite a running binary if we have permissions
         shutil.copy2(new_exe, current_exe)
         os.chmod(current_exe, 0o755)
         
