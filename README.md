@@ -12,9 +12,9 @@ You can download the latest pre-built executable for Linux (Ubuntu 22.04+/Debian
 
 ```bash
 mkdir -p ~/.local/bin
-# Download from GitHub Releases
-curl -L https://github.com/pigdome/jarvis/releases/latest/download/jarvis \
-  -o ~/.local/bin/jarvis && chmod +x ~/.local/bin/jarvis
+# Download and extract the binary to ~/.local/bin
+curl -L https://github.com/pigdome/jarvis/releases/latest/download/jarvis.tar.gz | tar -xz -C ~/.local/bin
+chmod +x ~/.local/bin/jarvis
 ```
 
 Make sure `~/.local/bin` is in your `$PATH`.
