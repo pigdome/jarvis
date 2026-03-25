@@ -84,14 +84,79 @@ def vpn(
 @app.command()
 def speedtest():
     """
-    Run a speed test using speedtest-cli.
+    Run a speed test using speedtest-cli (Python implementation).
     """
-    subprocess.run(["speedtest-cli"])
+    from rich.console import Console
+    from rich.progress import Progress, SpinnerColumn, TextColumn
+    import speedtest as st_lib
+    
+    console = Console()
+    console.print("🚀 [bold cyan]Starting Speedtest.net...[/bold cyan]")
+    
+    try:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+        ) as progress:
+            # 1. Finding server
+            progress.add_task(description="🔍 Finding best server...", total=None)
+            s = st_lib.Speedtest()
+            s.get_best_server()
+            
+            # 2. Download
+            task_dl = progress.add_task(description="📥 Testing Download speed...", total=None)
+            s.download()
+            progress.update(task_dl, completed=True)
+            
+            # 3. Upload
+            task_ul = progress.add_task(description="📤 Testing Upload speed...", total=None)
+            s.upload()
+            progress.update(task_ul, completed=True)
+            
+            results = s.results.dict()
+            
+        console.print(f"✅ [bold green]Speedtest Complete![/bold green]")
+        console.print(f"  • [bold]Host     :[/bold] {results['server']['host']} ({results['server']['name']})")
+        console.print(f"  • [bold]Download :[/bold] [cyan]{results['download'] / 1_000_000:.2f} Mbps[/cyan]")
+        console.print(f"  • [bold]Upload   :[/bold] [cyan]{results['upload'] / 1_000_000:.2f} Mbps[/cyan]")
+        console.print(f"  • [bold]Ping     :[/bold] [yellow]{results['ping']:.2f} ms[/yellow]")
+        
+    except Exception as e:
+        console.print(f"❌ [red]Speedtest failed: {e}[/red]")
 
 
 @app.command()
 def fast():
     """
-    Run a fast.com speed test.
+    Run a fast.com speed test (Python implementation).
     """
-    subprocess.run(["fast"])
+    from rich.console import Console
+    from rich.progress import Progress, SpinnerColumn, TextColumn
+    import subprocess
+    import json
+    
+    console = Console()
+    console.print("🚀 [bold cyan]Starting Fast.com (Netflix)...[/bold cyan]")
+    
+    # fast-cli (python version) often just uses a helper. 
+    # Since fastcli is a bit unstable, we'll try to use the library interface
+    try:
+        from fastcli import fastcli
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+        ) as progress:
+            progress.add_task(description="📥 Measuring download speed...", total=None)
+            # fastcli.run() returns the speed in Mbps as a float
+            speed = fastcli.run()
+            
+        console.print(f"✅ [bold green]Fast.com Complete![/bold green]")
+        console.print(f"  • [bold]Download :[/bold] [cyan]{speed:.2f} Mbps[/cyan]")
+        
+    except ImportError:
+        console.print("[yellow]⚠️  fastcli library not found. Falling back to system command...[/yellow]")
+        subprocess.run(["fast"])
+    except Exception as e:
+        console.print(f"❌ [red]Fast.com test failed: {e}[/red]")
