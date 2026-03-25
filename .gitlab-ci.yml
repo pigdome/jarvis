@@ -1,0 +1,51 @@
+stages:
+  - build
+  - release
+
+variables:
+  PACKAGE_REGISTRY_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/jarvis"
+
+build-binary:
+  stage: build
+  image: python:3.12-slim
+  script:
+    - pip install -r requirements.txt
+    - pip install -e .
+    - pyinstaller --onefile --name jarvis --clean src/jarvis/main.py
+    - |
+      curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+        --upload-file dist/jarvis \
+        "${PACKAGE_REGISTRY_URL}/${CI_COMMIT_TAG}/jarvis"
+  artifacts:
+    paths:
+      - dist/jarvis
+    expire_in: 1 hour
+  rules:
+    - if: $CI_COMMIT_TAG
+
+create-release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  script:
+    - echo "Creating release ${CI_COMMIT_TAG}"
+  release:
+    tag_name: $CI_COMMIT_TAG
+    name: "JARVIS ${CI_COMMIT_TAG}"
+    description: |
+      ## JARVIS ${CI_COMMIT_TAG}
+
+      ### Install
+
+      ```bash
+      sudo curl -L "${CI_PROJECT_URL}/-/releases/permalink/latest/downloads/jarvis" \
+        -o /usr/local/sbin/jarvis && sudo chmod +x /usr/local/sbin/jarvis
+      ```
+    assets:
+      links:
+        - name: jarvis
+          url: "${PACKAGE_REGISTRY_URL}/${CI_COMMIT_TAG}/jarvis"
+          link_type: package
+  rules:
+    - if: $CI_COMMIT_TAG
+  needs:
+    - build-binary

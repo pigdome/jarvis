@@ -1,0 +1,2 @@
+sudo -u postgres createuser --username=postgres --no-superuser --pwprompt USER
+sudo -u postgres createdb -E utf8 -l th_TH.utf8 -T template0 --owner=USER --encoding=UNICODE DB_NAME

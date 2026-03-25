@@ -1,0 +1,19 @@
+[project]
+name = "jarvis-cli"
+version = "0.16.0"
+description = "JARVIS - Tools for life hack"
+authors = [
+    {name = "Apirak", email = "apirak@punsarn.asia"}
+]
+dependencies = [
+    "typer[all]",
+    "shellingham",
+    "rich",
+]
+
+[project.scripts]
+jarvis = "jarvis.main:app"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

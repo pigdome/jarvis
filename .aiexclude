@@ -1,0 +1,56 @@
+# General build artifacts and temporary files
+**/build/
+**/dist/
+**/node_modules/
+**/*.log
+**/*.tmp
+**/tmp/
+**/logs/
+**/venv/
+**/vendor/ # Third-party libraries you don't typically modify or need AI to analyze
+
+# Development environment specific files
+**/.vscode/
+**/.idea/
+**/.history/
+**/.env
+**/*.env
+**/.DS_Store
+
+# Sensitive information (ensure these patterns cover all relevant files)
+**/secrets/
+**/keys/
+**/*.pem
+**/*.key
+**/*.enc
+**/config/production.json # Or other sensitive configuration files
+**/credentials.txt
+**/database.config # Example for database connection strings
+
+# Large binary files or assets
+**/*.iso
+**/*.zip
+**/*.tar.gz
+**/*.rar
+**/*.mp4
+**/*.mov
+**/*.bin
+**/*.exe
+**/*.log
+**/*.pdf
+**/*.jpg
+**/*.png
+**/*.gif
+**/*.mp3
+**/*.wav
+**/*.ogg
+**/*.sql
+**/*.sql.gz
+
+# Document files
+**/*.xlsx
+**/*.csv
+**/*.docx
+**/wstunnel
+**/jarvis-fast
+**/.git

@@ -1,0 +1,17 @@
+config/ssh/config.d/local
+config/id.tar.gz
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# PyInstaller build artifacts
+build/
+dist/
+
+# Secrets
+secrets.json
