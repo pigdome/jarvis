@@ -111,13 +111,19 @@ def update():
     tmp_file = "/tmp/jarvis.tar.gz"
     repo_url = "https://github.com/pigdome/jarvis/releases/latest/download/jarvis.tar.gz"
     
+    # Clear LD_LIBRARY_PATH to avoid library conflicts when running system binaries (like curl)
+    # from within a frozen PyInstaller bundle.
+    env = os.environ.copy()
+    for var in ['LD_LIBRARY_PATH', 'PYTHONHOME', 'PYTHONPATH']:
+        env.pop(var, None)
+            
     try:
         console.print(f"📥 Downloading latest version from [cyan]{repo_url}[/cyan]...")
-        subprocess.run(["curl", "-L", repo_url, "-o", tmp_file], check=True)
+        subprocess.run(["curl", "-L", repo_url, "-o", tmp_file], check=True, env=env)
         
         console.print("📦 Extracting binary...")
         # Extract jarvis from the tarball into /tmp
-        subprocess.run(["tar", "-xzf", tmp_file, "-C", "/tmp", "jarvis"], check=True)
+        subprocess.run(["tar", "-xzf", tmp_file, "-C", "/tmp", "jarvis"], check=True, env=env)
         
         new_exe = Path("/tmp/jarvis")
         if not new_exe.exists():
