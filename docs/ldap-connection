@@ -1,0 +1,10 @@
+#!/bin/bash
+
+#host="203.131.222.71"
+host="ad.tu.ac.th"
+base="DC=ad,DC=tu,DC=ac,DC=th"
+user_main="koha"
+pass_main="koha@2017TU"
+filter="sAMAccountName=$1"
+
+ldapsearch -D "$user_main" -w "$pass_main" -p 389 -h $host -b $base -s sub $filter

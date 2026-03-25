@@ -1,0 +1,22 @@
+# Secrets and Environment
+secrets.json
+.env
+
+# Personal Configuration (Sensitive)
+config/authorized_keys
+config/id.tar.gz
+config/id.tar.gz.gpg
+config/keepass/*.kdbx
+config/ssh/config.d/local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# PyInstaller build artifacts
+build/
+dist/

@@ -1,0 +1,3 @@
+[submodule "config/ssh/config.d"]
+	path = config/ssh/config.d
+	url = https://git.punsarn.com/tools/ssh-config
