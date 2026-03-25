@@ -105,7 +105,7 @@ echo "📍 Executable: $DIST_DIR/jarvis"
 # 6. Git Tag and Release
 echo ""
 if [ -t 0 ]; then
-    read -p "❓ Do you want to create a git tag v$VERSION and push to GitLab? [y/N]: " -n 1 -r
+    read -p "❓ Do you want to create a git tag v$VERSION and push to GitHub? [y/N]: " -n 1 -r
     echo
 else
     # Non-interactive skip tagging
@@ -131,7 +131,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     
     echo "⬆️  Pushing tag to origin..."
     git push origin "v$VERSION"
-    echo "🚀 Tag pushed! GitLab CI should start the release process."
+    echo "🚀 Tag pushed! GitHub Actions should start the release process."
 else
     echo "⏭️  Skipped git tagging."
 fi
