@@ -8,7 +8,7 @@ on:
 jobs:
   release:
     name: Build & Release for Linux (Universal Compatibility)
-    runs-on: ubuntu-20.04 # Ubuntu 20.04 has GLIBC 2.31, which is compatible with most systems today.
+    runs-on: ubuntu-22.04 # Ubuntu 22.04 (Jammy) is the current stable Ubuntu LTS and will be compatible with modern stable OSs like Debian 12.
     permissions:
       contents: write # Needed to create releases
 
