@@ -30,6 +30,8 @@ jobs:
 
       - name: 🚀 Build Executable with PyInstaller
         run: |
+          # Create a dummy secrets.json if it doesn't exist for the build to pass
+          touch secrets.json
           pyinstaller --onefile \
             --name jarvis \
             --add-data "config:config" \
