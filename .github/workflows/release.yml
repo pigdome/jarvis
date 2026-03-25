@@ -7,8 +7,8 @@ on:
 
 jobs:
   release:
-    name: Build & Release for Linux (Ubuntu)
-    runs-on: ubuntu-latest
+    name: Build & Release for Linux (Universal Compatibility)
+    runs-on: ubuntu-20.04 # Ubuntu 20.04 has GLIBC 2.31, which is compatible with most systems today.
     permissions:
       contents: write # Needed to create releases
 
