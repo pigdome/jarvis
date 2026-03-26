@@ -92,6 +92,8 @@ fi
 "$PYI_BIN" --onefile \
     --name jarvis \
     --add-data "config:config" \
+    --add-data "config/.vimrc:config" \
+    --add-data "config/authorized_keys:config" \
     --add-data "module:module" \
     --add-data "lib:lib" \
     --add-data "secrets.json:." \
