@@ -50,9 +50,10 @@ def get_secrets():
     """
     possible_secrets = [
         SECRETS_PATH,                                # 1. ~/.jarvis/secrets.json
-        Path.cwd() / "secrets.json",                 # 2. Current Working Directory
-        Path(sys.executable).parent / "secrets.json",# 3. Next to the binary
-        BUNDLE_DIR / "secrets.json",                 # 4. Bundled in the package
+        Path("/etc/jarvis/secrets.json"),            # 2. System-wide (production)
+        Path.cwd() / "secrets.json",                 # 3. Current Working Directory
+        Path(sys.executable).parent / "secrets.json",# 4. Next to the binary
+        BUNDLE_DIR / "secrets.json",                 # 5. Bundled in the package
     ]
     
     secret_file = find_first_existing(possible_secrets, None)
