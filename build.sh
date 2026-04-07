@@ -96,7 +96,6 @@ fi
     --add-data "config/authorized_keys:config" \
     --add-data "module:module" \
     --add-data "lib:lib" \
-    --add-data "secrets.json:." \
     --clean \
     src/jarvis/main.py
 
