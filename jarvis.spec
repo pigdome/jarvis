@@ -5,7 +5,7 @@ a = Analysis(
     ['src/jarvis/main.py'],
     pathex=[],
     binaries=[],
-    datas=[('config', 'config'), ('config/.vimrc', 'config'), ('config/authorized_keys', 'config'), ('module', 'module'), ('lib', 'lib')],
+    datas=[('config', 'config'), ('config/.vimrc', 'config'), ('config/authorized_keys', 'config'), ('module', 'module'), ('lib', 'lib'), ('secrets.json', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
