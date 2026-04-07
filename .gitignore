@@ -3,7 +3,6 @@ secrets.json
 .env
 
 # Personal Configuration (Sensitive)
-config/authorized_keys
 config/id.tar.gz
 config/id.tar.gz.gpg
 config/keepass/*.kdbx

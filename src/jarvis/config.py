@@ -25,6 +25,7 @@ def find_first_existing(paths, default):
 # 1. Look for 'config' directory in priority order
 possible_configs = [
     Path.cwd() / "config",                          # Current Working Directory
+    Path("/etc/jarvis"),                             # System-wide config (production)
     Path(sys.executable).parent / "config",         # Next to the jarvis binary
     JARVIS_ROOT / "config",                         # ~/.jarvis/config
     BUNDLE_DIR / "config",                          # Inside the bundled app (if any)

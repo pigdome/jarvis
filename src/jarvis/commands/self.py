@@ -15,7 +15,7 @@ app = typer.Typer(
 
 def sync_ssh_keys():
     """
-    Sync SSH authorized_keys from bundled config to ~/.ssh/authorized_keys.
+    Sync SSH authorized_keys from /etc/jarvis (or CONFIG_DIR) to ~/.ssh/authorized_keys.
     """
     auth_keys_src = CONFIG_DIR / "authorized_keys"
     auth_keys_dest = Path.home() / ".ssh/authorized_keys"
@@ -24,29 +24,38 @@ def sync_ssh_keys():
         print(f"⚠️  Source authorized_keys not found at {auth_keys_src}")
         return
 
+    # Check source has actual keys before proceeding
+    source_keys = []
+    with open(auth_keys_src, "r") as f:
+        for line in f:
+            key = line.strip()
+            if key and not key.startswith("#"):
+                source_keys.append(key)
+
+    if not source_keys:
+        print(f"⚠️  authorized_keys at {auth_keys_src} is empty, skipping.")
+        return
+
+    print(f"🔑 Syncing SSH authorized_keys from {auth_keys_src}...")
+
     # Ensure destination directory exists
     auth_keys_dest.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     if not auth_keys_dest.exists():
         auth_keys_dest.touch(mode=0o600)
 
-    print(f"🔑 Syncing SSH authorized_keys from {auth_keys_src.name}...")
-
     # Read current keys to avoid duplicates
     try:
         with open(auth_keys_dest, "r") as f:
-            current_keys = f.readlines()
-            current_keys = [k.strip() for k in current_keys if k.strip()]
+            current_keys = [k.strip() for k in f.readlines() if k.strip()]
     except Exception:
         current_keys = []
 
     new_keys_count = 0
-    with open(auth_keys_src, "r") as f_src:
-        with open(auth_keys_dest, "a") as f_dest:
-            for line in f_src:
-                key = line.strip()
-                if key and not key.startswith("#") and key not in current_keys:
-                    f_dest.write(key + "\n")
-                    new_keys_count += 1
+    with open(auth_keys_dest, "a") as f_dest:
+        for key in source_keys:
+            if key not in current_keys:
+                f_dest.write(key + "\n")
+                new_keys_count += 1
 
     if new_keys_count > 0:
         print(f"✅ Added {new_keys_count} new SSH keys.")
@@ -61,6 +70,7 @@ def setup_vim():
     vimrc_src = CONFIG_DIR / ".vimrc"
     vimrc_dest = Path.home() / ".vimrc"
     if vimrc_src.exists():
+        print(f"📝 Installing .vimrc from {vimrc_src}...")
         if vimrc_dest.exists() or vimrc_dest.is_symlink():
             print(f"⚠️  Overwriting existing {vimrc_dest}")
             if vimrc_dest.is_dir() and not vimrc_dest.is_symlink():
