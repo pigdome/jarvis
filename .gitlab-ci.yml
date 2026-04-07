@@ -11,7 +11,12 @@ build-binary:
   script:
     - pip install -r requirements.txt
     - pip install -e .
+    - echo "=== Verifying source files ===" && wc -l config/authorized_keys config/.vimrc
     - pyinstaller jarvis.spec
+    - echo "=== Verifying binary ===" && ./dist/jarvis version
+    - |
+      ./dist/jarvis self deploy 2>&1 | tee /tmp/deploy_out.txt
+      grep -q "Syncing SSH" /tmp/deploy_out.txt || { echo "ERROR: authorized_keys not embedded!"; exit 1; }
     - |
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
         --upload-file dist/jarvis \
