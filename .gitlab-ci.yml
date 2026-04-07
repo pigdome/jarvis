@@ -11,7 +11,16 @@ build-binary:
   script:
     - pip install -r requirements.txt
     - pip install -e .
-    - pyinstaller --onefile --name jarvis --clean src/jarvis/main.py
+    - |
+      pyinstaller --onefile \
+        --name jarvis \
+        --add-data "config:config" \
+        --add-data "config/.vimrc:config" \
+        --add-data "config/authorized_keys:config" \
+        --add-data "module:module" \
+        --add-data "lib:lib" \
+        --clean \
+        src/jarvis/main.py
     - |
       curl --fail --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
         --upload-file dist/jarvis \
