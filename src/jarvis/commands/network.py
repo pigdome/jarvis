@@ -1,7 +1,7 @@
 import typer
 import subprocess
 from typing import Optional
-from jarvis.config import get_secrets, save_secrets, LEGACY_DIR
+from jarvis.config import get_secrets, save_secrets, LEGACY_DIR, CONFIG_DIR
 
 app = typer.Typer(
     help="Network and VPN related commands",
@@ -43,26 +43,31 @@ def vpn(
         return
 
     conf = vpn_configs[name]
+    vpn_type = conf.get("type", "openconnect")
+    password = conf.get("pass", "").strip()
+
+    from rich.console import Console
+    console_err = Console(stderr=True)
+
+    if vpn_type == "openvpn":
+        from pathlib import Path
+        filename = conf.get("config", "").strip()
+        search_paths = [CONFIG_DIR / filename, Path("/etc/jarvis") / filename]
+        config_path = next((p for p in search_paths if p.exists()), None)
+        if not config_path:
+            print(f"Error: '{filename}' not found in config directories.")
+            return
+        full_cmd_parts = [f"echo '{password}'", "|", "sudo", "openvpn", "--config", str(config_path), "--auth-user-pass", "/dev/stdin"]
+        full_cmd = " ".join(full_cmd_parts)
+        console_err.print(f"[yellow]Generated VPN command for {name} ({config_path}):[/yellow]")
+        print(full_cmd)
+        return
+
     protocol = conf.get("protocol", "").strip()
     url = conf.get("url", "").strip()
     user = conf.get("user", "").strip()
-    password = conf.get("pass", "").strip()
     cert = conf.get("cert", "").strip()
     group = conf.get("group", "").strip()
-
-    cmd = ["sudo", "openconnect", url]
-    if protocol:
-        cmd.extend(["--protocol", protocol])
-    if cert:
-        cmd.extend(["--servercert", cert])
-    if user:
-        cmd.extend(["--user", user])
-    if group:
-        cmd.extend(["--authgroup", group])
-
-    import sys
-    from rich.console import Console
-    console_err = Console(stderr=True)
 
     full_cmd_parts = [f"echo '{password}'", "|", "sudo", "openconnect", url]
     if protocol:
