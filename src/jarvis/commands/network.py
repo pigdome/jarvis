@@ -57,10 +57,9 @@ def vpn(
         if not config_path:
             print(f"Error: '{filename}' not found in config directories.")
             return
-        full_cmd_parts = [f"echo '{password}'", "|", "sudo", "openvpn", "--config", str(config_path), "--auth-user-pass", "/dev/stdin"]
-        full_cmd = " ".join(full_cmd_parts)
-        console_err.print(f"[yellow]Generated VPN command for {name} ({config_path}):[/yellow]")
-        print(full_cmd)
+        full_cmd = f"echo '{password}' | sudo openvpn --config {str(config_path)} --auth-user-pass /dev/stdin"
+        console_err.print(f"[yellow]Connecting to VPN {name} ({config_path})...[/yellow]")
+        subprocess.run(full_cmd, shell=True)
         return
 
     protocol = conf.get("protocol", "").strip()
@@ -81,9 +80,8 @@ def vpn(
 
     full_cmd = " ".join(full_cmd_parts)
 
-    console_err.print(f"[yellow]Generated VPN command for {name} ({url}):[/yellow]")
-    # Print the command to stdout so it can be piped
-    print(full_cmd)
+    console_err.print(f"[yellow]Connecting to VPN {name} ({url})...[/yellow]")
+    subprocess.run(full_cmd, shell=True)
 
 
 @app.command()
