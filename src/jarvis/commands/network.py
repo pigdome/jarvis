@@ -57,9 +57,8 @@ def vpn(
         if not config_path:
             print(f"Error: '{filename}' not found in config directories.")
             return
-        full_cmd = f"echo '{password}' | sudo openvpn --config {str(config_path)} --auth-user-pass /dev/stdin"
         console_err.print(f"[yellow]Connecting to VPN {name} ({config_path})...[/yellow]")
-        subprocess.run(full_cmd, shell=True)
+        subprocess.run(["sudo", "openvpn", "--config", str(config_path)])
         return
 
     protocol = conf.get("protocol", "").strip()
@@ -68,20 +67,19 @@ def vpn(
     cert = conf.get("cert", "").strip()
     group = conf.get("group", "").strip()
 
-    full_cmd_parts = [f"echo '{password}'", "|", "sudo", "openconnect", url]
+    cmd = ["sudo", "openconnect", url]
     if protocol:
-        full_cmd_parts.extend(["--protocol", protocol])
+        cmd.extend(["--protocol", protocol])
     if cert:
-        full_cmd_parts.extend(["--servercert", cert])
+        cmd.extend(["--servercert", cert])
     if user:
-        full_cmd_parts.extend(["--user", user])
+        cmd.extend(["--user", user])
     if group:
-        full_cmd_parts.extend(["--authgroup", group])
-
-    full_cmd = " ".join(full_cmd_parts)
+        cmd.extend(["--authgroup", group])
+    cmd.extend(["--passwd-on-stdin"])
 
     console_err.print(f"[yellow]Connecting to VPN {name} ({url})...[/yellow]")
-    subprocess.run(full_cmd, shell=True)
+    subprocess.run(cmd, input=password.encode())
 
 
 @app.command()
