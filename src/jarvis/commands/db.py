@@ -26,21 +26,47 @@ def psql():
     subprocess.run(["sudo", "-u", "postgres", "psql"])
 
 
+KOHA_IGNORE_TABLES = [
+    "biblioimages",
+    "cover_images",
+    "patronimage",
+    "action_logs",
+    "misc_files",
+]
+
+
 @app.command()
-def mysqldump(database: str = typer.Argument(..., help="Database name to dump")):
+def mysqldump(
+    database: str = typer.Argument(..., help="Database name to dump"),
+    single_transaction: bool = typer.Option(False, "-s", help="Use --single-transaction"),
+    koha: bool = typer.Option(False, "-k", help="Ignore large Koha tables"),
+):
     """
     Dump a MySQL database.
     """
-    subprocess.run(["sudo", "mysqldump", "--defaults-file=/etc/mysql/debian.cnf", database])
+    import datetime
+    from rich.console import Console
+    console = Console(stderr=True)
 
+    cmd = ["sudo", "mysqldump", "--defaults-file=/etc/mysql/debian.cnf"]
+    if single_transaction:
+        cmd.append("--single-transaction")
+    if koha:
+        for table in KOHA_IGNORE_TABLES:
+            cmd.append(f"--ignore-table={database}.{table}")
+    cmd.append(database)
 
-@app.command()
-def mysqldump_fast(database: str = typer.Argument(..., help="Database name to dump")):
-    """
-    Dump a MySQL database using fast method.
-    """
-    # Simply use mysqldump with some common optimization flags
-    subprocess.run(["sudo", "mysqldump", "--defaults-file=/etc/mysql/debian.cnf", "--opt", "--quick", database])
+    dump_file = f"{database}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.sql.gz"
+    console.print(f"[yellow]Dumping {database} -> {dump_file}...[/yellow]")
+
+    with open(dump_file, "wb") as f:
+        dump = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        gzip = subprocess.Popen(["gzip"], stdin=dump.stdout, stdout=f)
+        dump.stdout.close()
+        gzip.wait()
+        dump.wait()
+
+    console.print(f"[green]Done: {dump_file}[/green]")
 
 
 @app.command()
