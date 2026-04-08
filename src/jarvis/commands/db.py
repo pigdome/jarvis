@@ -56,7 +56,7 @@ def mysqldump(
             cmd.append(f"--ignore-table={database}.{table}")
     cmd.append(database)
 
-    dump_file = f"{database}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.sql.gz"
+    dump_file = f"/tmp/{database}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.sql.gz"
     console.print(f"[yellow]Dumping {database} -> {dump_file}...[/yellow]")
 
     with open(dump_file, "wb") as f:
