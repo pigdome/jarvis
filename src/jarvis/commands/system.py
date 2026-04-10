@@ -20,9 +20,45 @@ def callback():
     pass
 
 
+USER_CONFIGS = {
+    "nick": {
+        "user": "satrawut",
+        "pass": "Hei4chuo",
+        "key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH+aScDXWUU+HMKXqxCNV7RcDaCDYQW4sX7vdtNVPcuo satrawut@Satrawut-Punsarn"
+    },
+    "man": {
+        "user": "praphas",
+        "pass": "Eeghi2ah",
+        "key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE4UAa9/WB+upCioRQ1PhnySmCcnaMWq/NDn049T2dww praphas@Manzybecalos"
+    },
+    "utt": {
+        "user": "uttakran",
+        "pass": "La4weegh",
+        "key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ7SeMOoxMoRCMYKHu2fc0a6APKYLDSgq2/s4eCoVLEK uttakran@utkrn-HP"
+    },
+    "joe": {
+        "user": "pongtawat",
+        "pass": "TaD9eiho",
+        "key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMR27WU+nKSR4j8SKrRB0M6E7jaf8IbncKFqXpZ9ypsV pongtawat@erawan"
+    },
+    "george": {
+        "user": "aekavute",
+        "pass": "KXdA0jcf"
+    },
+    "je": {
+        "user": "pichchai",
+        "pass": "vD97BuS8",
+        "key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDA3kxqiMOWG5m4kp72AflALaBzn+epVU8leFqVIzDhm kotorisn@kotorisn-GL552JX"
+    },
+    "me": {
+        "user": "apirak",
+        "key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDA3kxqiMOWG5m4kp72AflALaBzn+epVU8leFqVIzDhm kotorisn@kotorisn-GL552JX"
+    },
+}
+
+
 def get_nicknames(ctx: typer.Context, incomplete: str):
-    nicknames = ["nick", "man", "utt", "joe", "george", "je", "me"]
-    return [name for name in nicknames if name.startswith(incomplete)]
+    return [name for name in USER_CONFIGS.keys() if name.startswith(incomplete)]
 
 
 @app.command()
@@ -30,7 +66,7 @@ def adduser(
     nickname: str = typer.Argument(
         ...,
         autocompletion=get_nicknames,
-        help="Nickname of the user to add"
+        help="Nickname of the user to add (e.g., nick, man, utt, joe, george, je, me)"
     ),
     sudo_privs: bool = typer.Option(
         False, "--sudo", "-s", help="Add sudo privileges"),
@@ -38,27 +74,59 @@ def adduser(
         False, "--authkeys", "-k", help="Add authorized_keys"),
 ):
     """
-    Add a new user based on predefined nicknames or any name.
+    Add a new user based on predefined nicknames.
     """
     from rich.console import Console
     console = Console()
     
-    console.print(f"👤 [bold blue]Adding user:[/bold blue] [cyan]{nickname}[/cyan]...")
-    
-    # 1. Create user
-    subprocess.run(["sudo", "useradd", "-m", "-s", "/bin/bash", nickname])
+    config = USER_CONFIGS.get(nickname)
+    if not config:
+        console.print(f"[red]❌ Error: Nickname '{nickname}' not found in predefined list.[/red]")
+        return
+
+    username = config["user"]
+    password = config.get("pass")
+    authorized_keys = config.get("key")
+
+    # 1. Check if user exists, add if not
+    result = subprocess.run(["id", "-u", username], capture_output=True)
+    if result.returncode == 0:
+        console.print(f"⚠️  [yellow]Alert: User {username} already exists[/yellow]")
+    else:
+        if password:
+            console.print(f"👤 [bold blue]Adding user:[/bold blue] [cyan]{username}[/cyan] with password...")
+            subprocess.run(["sudo", "adduser", "--disabled-password", "--gecos", "", username], check=True)
+            subprocess.run(["sudo", "chpasswd"], input=f"{username}:{password}", text=True, check=True)
+        else:
+            console.print(f"👤 [bold blue]Adding user:[/bold blue] [cyan]{username}[/cyan] (no password)...")
+            subprocess.run(["sudo", "adduser", "--disabled-password", "--gecos", "", username], check=True)
     
     # 2. Add sudo if requested
     if sudo_privs:
-        console.print(f"🔑 [bold yellow]Adding sudo privileges for {nickname}...[/bold yellow]")
-        subprocess.run(["sudo", "usermod", "-aG", "sudo", nickname])
+        console.print(f"🔑 [bold yellow]Adding sudo privileges for {username}...[/bold yellow]")
+        subprocess.run(["sudo", "adduser", username, "sudo"], check=True)
     
-    # 3. Authkeys (Placeholder logic if no legacy script)
+    # 3. Authorized Keys
     if authkeys:
-        console.print(f"📂 [bold yellow]Adding authorized_keys for {nickname}...[/bold yellow]")
-        auth_file = Path("/home") / nickname / ".ssh" / "authorized_keys"
-        # Since the legacy script is gone, we might lack the source keys
-        console.print(f"[red]⚠️  Note: Legacy script for authkeys was removed. Please add keys manually to {auth_file}[/red]")
+        if not authorized_keys:
+            console.print(f"[red]⚠️  Warning: No authorized_keys defined for {nickname}[/red]")
+        else:
+            ssh_dir = Path("/home") / username / ".ssh"
+            auth_file = ssh_dir / "authorized_keys"
+            
+            # Check if file exists via sudo (since it's in user's home)
+            check_exists = subprocess.run(["sudo", "test", "-f", str(auth_file)])
+            if check_exists.returncode == 0:
+                console.print(f"⚠️  [yellow]Warn: authorized_keys exists for {username}[/yellow]")
+            else:
+                console.print(f"📂 [bold yellow]Adding authorized_keys for {username}...[/bold yellow]")
+                subprocess.run(["sudo", "mkdir", "-p", str(ssh_dir)], check=True)
+                subprocess.run(["sudo", "tee", str(auth_file)], input=authorized_keys, text=True, capture_output=True, check=True)
+                subprocess.run(["sudo", "chmod", "700", str(ssh_dir)], check=True)
+                subprocess.run(["sudo", "chmod", "600", str(auth_file)], check=True)
+                subprocess.run(["sudo", "chown", f"{username}:{username}", "-R", str(ssh_dir)], check=True)
+    
+    console.print(f"[green]✅ Done for user {username}[/green]")
 
 
 @app.command()
