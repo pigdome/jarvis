@@ -74,7 +74,7 @@ System-level management and setup.
 | `jarvis sys init` | **Root only.** Full server setup (Apt, TZ, Locales, SSH Hardening) |
 | `jarvis sys update` | Run system update (apt update/upgrade/clean/autoremove) |
 | `jarvis sys adduser NAME` | Add a new user with sudo/ssh-key options |
-| `jarvis sys clean-pc` | Run system cleanup (apt cleanup) |
+| `jarvis sys clean-pc` | Clean a Linux PC (apt, Trash, thumbnails, caches, journals, Flatpak/Snap; optional Docker) |
 | `jarvis sys upload FILE` | Upload a file to a transfer service for easy sharing |
 
 ### 🌐 net — Network & Security

@@ -2,8 +2,10 @@ import typer
 import subprocess
 import os
 import sys
+import shutil
+import time
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Iterable
 from jarvis.config import get_secrets, save_secrets, LEGACY_DIR, JARVIS_ROOT, CONFIG_DIR, BIN_DIR
 
 app = typer.Typer(
@@ -129,19 +131,193 @@ def adduser(
     console.print(f"[green]✅ Done for user {username}[/green]")
 
 
+def _sudo_cmd(command: list[str]) -> list[str]:
+    if os.geteuid() == 0:
+        return command
+    return ["sudo"] + command
+
+
+def _command_exists(command: str) -> bool:
+    return shutil.which(command) is not None
+
+
+def _run_cleanup_command(command: list[str], dry_run: bool = False) -> bool:
+    printable = " ".join(command)
+    if dry_run:
+        print(f"DRY RUN: {printable}")
+        return True
+
+    print(f"🚀 Running: {printable}")
+    result = subprocess.run(command)
+    if result.returncode != 0:
+        print(f"⚠️  Command failed ({result.returncode}): {printable}")
+        return False
+    return True
+
+
+def _path_size(path: Path) -> int:
+    if not path.exists():
+        return 0
+    if path.is_file() or path.is_symlink():
+        try:
+            return path.stat().st_size
+        except OSError:
+            return 0
+
+    total = 0
+    for item in path.rglob("*"):
+        try:
+            if item.is_file() or item.is_symlink():
+                total += item.stat().st_size
+        except OSError:
+            continue
+    return total
+
+
+def _format_bytes(size: int) -> str:
+    value = float(size)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if value < 1024 or unit == "TB":
+            return f"{value:.1f} {unit}"
+        value /= 1024
+    return f"{value:.1f} TB"
+
+
+def _remove_path_contents(paths: Iterable[Path], dry_run: bool = False) -> int:
+    freed = 0
+    for path in paths:
+        expanded = path.expanduser()
+        if not expanded.exists():
+            continue
+
+        targets = list(expanded.iterdir()) if expanded.is_dir() else [expanded]
+        for target in targets:
+            size = _path_size(target)
+            freed += size
+            if dry_run:
+                print(f"DRY RUN: remove {target} ({_format_bytes(size)})")
+                continue
+
+            try:
+                if target.is_dir() and not target.is_symlink():
+                    shutil.rmtree(target)
+                else:
+                    target.unlink()
+                print(f"🧹 Removed {target} ({_format_bytes(size)})")
+            except OSError as exc:
+                print(f"⚠️  Could not remove {target}: {exc}")
+    return freed
+
+
 @app.command()
-def clean_pc():
+def clean_pc(
+    yes: bool = typer.Option(False, "--yes", "-y", help="Run without confirmation"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show cleanup actions without deleting anything"),
+    include_docker: bool = typer.Option(False, "--docker", help="Also prune unused Docker data"),
+    skip_apt: bool = typer.Option(False, "--skip-apt", help="Skip apt autoremove/autoclean/clean"),
+    skip_user_cache: bool = typer.Option(False, "--skip-user-cache", help="Skip Trash, thumbnails, and user cache cleanup"),
+    skip_journal: bool = typer.Option(False, "--skip-journal", help="Skip systemd journal vacuum"),
+    journal_days: int = typer.Option(14, "--journal-days", min=1, help="Keep this many days of systemd journal logs"),
+):
     """
-    Clean the system (apt cleanup).
+    Clean a local Linux PC: apt packages, user caches, trash, journals, Flatpak/Snap, and optional Docker.
     """
-    commands = [
-        ["sudo", "apt", "autoremove", "-y"],
-        ["sudo", "apt", "autoclean"],
-        ["sudo", "apt", "clean"],
+    from rich.console import Console
+    from rich.prompt import Confirm
+
+    console = Console()
+    home = Path.home()
+    user_cache_paths = [
+        home / ".local/share/Trash/files",
+        home / ".local/share/Trash/info",
+        home / ".cache/thumbnails",
+        home / ".cache/pip",
+        home / ".npm/_cacache",
+        home / ".cache/yarn",
+        home / ".cache/pnpm",
     ]
-    for cmd in commands:
-        print(f"🚀 Running: {' '.join(cmd)}")
-        subprocess.run(cmd)
+
+    actions = []
+    if not skip_apt and _command_exists("apt"):
+        actions.append("apt autoremove/autoclean/clean")
+    if not skip_user_cache:
+        actions.append("Trash, thumbnails, and common user package caches")
+    if not skip_journal and _command_exists("journalctl"):
+        actions.append(f"systemd journal older than {journal_days} days")
+    if _command_exists("flatpak"):
+        actions.append("unused Flatpak runtimes/apps")
+    if _command_exists("snap"):
+        actions.append("disabled Snap revisions")
+    if include_docker and _command_exists("docker"):
+        actions.append("unused Docker containers/images/networks/build cache")
+
+    console.print("[bold cyan]Linux PC cleanup plan[/bold cyan]")
+    for action in actions:
+        console.print(f"  • {action}")
+
+    if dry_run:
+        console.print("[yellow]Dry run enabled; no files or packages will be removed.[/yellow]")
+    elif not yes and not Confirm.ask("Continue with cleanup?", default=False):
+        console.print("[yellow]Cancelled.[/yellow]")
+        raise typer.Exit(0)
+
+    failures = 0
+
+    if not skip_apt and _command_exists("apt"):
+        apt_commands = [
+            _sudo_cmd(["apt", "autoremove", "-y"]),
+            _sudo_cmd(["apt", "autoclean"]),
+            _sudo_cmd(["apt", "clean"]),
+        ]
+        for command in apt_commands:
+            failures += 0 if _run_cleanup_command(command, dry_run) else 1
+    elif not skip_apt:
+        console.print("[yellow]Skipping apt cleanup: apt command not found.[/yellow]")
+
+    if not skip_user_cache:
+        before = sum(_path_size(path.expanduser()) for path in user_cache_paths)
+        freed = _remove_path_contents(user_cache_paths, dry_run)
+        console.print(f"[green]User cache cleanup target:[/green] {_format_bytes(before or freed)}")
+
+    if not skip_journal and _command_exists("journalctl"):
+        failures += 0 if _run_cleanup_command(
+            _sudo_cmd(["journalctl", f"--vacuum-time={journal_days}d"]),
+            dry_run,
+        ) else 1
+    elif not skip_journal:
+        console.print("[yellow]Skipping journal cleanup: journalctl command not found.[/yellow]")
+
+    if _command_exists("flatpak"):
+        failures += 0 if _run_cleanup_command(["flatpak", "uninstall", "--unused", "-y"], dry_run) else 1
+
+    if _command_exists("snap"):
+        if dry_run:
+            print("DRY RUN: remove disabled Snap revisions")
+        else:
+            result = subprocess.run(["snap", "list", "--all"], capture_output=True, text=True)
+            if result.returncode == 0:
+                for line in result.stdout.splitlines()[1:]:
+                    parts = line.split()
+                    if len(parts) >= 6 and "disabled" in parts:
+                        name, revision = parts[0], parts[2]
+                        failures += 0 if _run_cleanup_command(
+                            _sudo_cmd(["snap", "remove", name, "--revision", revision])
+                        ) else 1
+            else:
+                failures += 1
+                console.print("[yellow]Could not list Snap revisions.[/yellow]")
+
+    if include_docker:
+        if _command_exists("docker"):
+            failures += 0 if _run_cleanup_command(["docker", "system", "prune", "-af"], dry_run) else 1
+        else:
+            console.print("[yellow]Skipping Docker cleanup: docker command not found.[/yellow]")
+
+    if failures:
+        console.print(f"[yellow]Cleanup completed with {failures} warning(s).[/yellow]")
+        raise typer.Exit(1)
+
+    console.print(f"[green]✅ Cleanup complete at {time.strftime('%Y-%m-%d %H:%M:%S')}[/green]")
 
 
 @app.command()
