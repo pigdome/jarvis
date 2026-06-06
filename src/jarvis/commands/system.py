@@ -469,10 +469,19 @@ def claude_skill(
     from rich.prompt import Confirm
 
     console = Console()
-    skills_src = BUNDLE_DIR / "config" / "claude-skills"
+    _candidates = [
+        BUNDLE_DIR / "config" / "claude-skills",             # bundled binary (after rebuild) or source tree
+        Path(sys.executable).parent / "config" / "claude-skills",  # next to the binary
+        JARVIS_ROOT / "claude-skills",                        # ~/.jarvis/claude-skills/ (user override)
+    ]
+    skills_src = next((p for p in _candidates if p.exists()), None)
 
-    if not skills_src.exists():
-        console.print(f"[red]❌ Skills source directory not found: {skills_src}[/red]")
+    if skills_src is None:
+        console.print("[red]❌ Skills source directory not found.[/red]")
+        console.print("[dim]Searched:[/dim]")
+        for p in _candidates:
+            console.print(f"  [dim]• {p}[/dim]")
+        console.print(f"\n[yellow]Tip:[/yellow] Copy skill .md files to [cyan]{JARVIS_ROOT / 'claude-skills'}[/cyan] to use them without rebuilding.")
         raise typer.Exit(1)
 
     skill_files = sorted(skills_src.glob("*.md"))
