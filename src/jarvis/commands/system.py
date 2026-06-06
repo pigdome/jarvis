@@ -453,6 +453,76 @@ def setup_ssh():
     print(f"👉 Move to ~/.ssh when ready:  mv /tmp/.ssh/* ~/.ssh/")
 
 
+@app.command(name="claude-skill")
+def claude_skill(
+    list_only: bool = typer.Option(False, "--list", "-l", help="List skills without installing"),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing skills without prompting"),
+):
+    """
+    Install or update all Claude skills to ~/.claude/commands/.
+
+    Skills are sourced from config/claude-skills/ in the JARVIS project.
+    Run this after adding or editing a skill file to deploy it globally.
+    """
+    from rich.console import Console
+    from rich.table import Table
+    from rich.prompt import Confirm
+
+    console = Console()
+    skills_src = CONFIG_DIR.parent / "config" / "claude-skills"
+
+    if not skills_src.exists():
+        # Fallback: look relative to JARVIS_ROOT
+        skills_src = JARVIS_ROOT / "config" / "claude-skills"
+
+    if not skills_src.exists():
+        console.print(f"[red]❌ Skills source directory not found: {skills_src}[/red]")
+        raise typer.Exit(1)
+
+    skill_files = sorted(skills_src.glob("*.md"))
+    if not skill_files:
+        console.print(f"[yellow]⚠️  No skill files found in {skills_src}[/yellow]")
+        raise typer.Exit(0)
+
+    dest_dir = Path.home() / ".claude" / "commands"
+
+    if list_only:
+        table = Table(title="Available Claude Skills", show_lines=True)
+        table.add_column("Skill", style="cyan")
+        table.add_column("Source", style="dim")
+        table.add_column("Installed", style="green")
+        for sf in skill_files:
+            dest = dest_dir / sf.name
+            installed = "✅ yes" if dest.exists() else "❌ no"
+            table.add_row(sf.stem, str(sf), installed)
+        console.print(table)
+        return
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    installed, updated, skipped = [], [], []
+
+    for sf in skill_files:
+        dest = dest_dir / sf.name
+        already_exists = dest.exists()
+
+        if already_exists and not force and not Confirm.ask(f"  Overwrite existing skill [cyan]{sf.stem}[/cyan]?", default=True):
+            skipped.append(sf.stem)
+            continue
+
+        shutil.copy2(sf, dest)
+        (updated if already_exists else installed).append(sf.stem)
+
+    if installed:
+        console.print(f"[green]✅ Installed:[/green] {', '.join(installed)}")
+    if updated:
+        console.print(f"[blue]🔄 Updated:[/blue]  {', '.join(updated)}")
+    if skipped:
+        console.print(f"[yellow]⏭️  Skipped:[/yellow]  {', '.join(skipped)}")
+
+    console.print(f"\n[dim]Skills live at: {dest_dir}[/dim]")
+    console.print("[dim]Use /project-review (or the skill name) inside Claude Code to invoke.[/dim]")
+
+
 @app.command()
 def update():
     """
