@@ -6,7 +6,7 @@ import shutil
 import time
 from pathlib import Path
 from typing import Optional, Iterable
-from jarvis.config import get_secrets, save_secrets, LEGACY_DIR, JARVIS_ROOT, CONFIG_DIR, BIN_DIR
+from jarvis.config import get_secrets, save_secrets, LEGACY_DIR, JARVIS_ROOT, CONFIG_DIR, BIN_DIR, BUNDLE_DIR
 
 app = typer.Typer(
     help="System and Infrastructure related commands",
@@ -469,11 +469,7 @@ def claude_skill(
     from rich.prompt import Confirm
 
     console = Console()
-    skills_src = CONFIG_DIR.parent / "config" / "claude-skills"
-
-    if not skills_src.exists():
-        # Fallback: look relative to JARVIS_ROOT
-        skills_src = JARVIS_ROOT / "config" / "claude-skills"
+    skills_src = BUNDLE_DIR / "config" / "claude-skills"
 
     if not skills_src.exists():
         console.print(f"[red]❌ Skills source directory not found: {skills_src}[/red]")
