@@ -7,7 +7,35 @@ variables:
 
 build-binary:
   stage: build
-  image: python:3.12-slim
+  # Debian 10 (buster, glibc 2.28) instead of python:3.12-slim (Debian 12, glibc 2.36).
+  # PyInstaller links libpython against the build machine's glibc, and glibc is
+  # forward-compatible only, so building on the oldest glibc keeps the binary runnable
+  # on Debian 10/11, Ubuntu 20.04/22.04, etc. There is no official Python 3.12 image
+  # for buster, so it's compiled from source.
+  image: debian:10
+  before_script:
+    - export DEBIAN_FRONTEND=noninteractive
+    # Debian 10 (buster) is EOL and removed from the regular mirrors; use the archive instead.
+    - sed -i "s|deb.debian.org|archive.debian.org|g; s|security.debian.org|archive.debian.org|g" /etc/apt/sources.list
+    - echo "Acquire::Check-Valid-Until \"false\";" > /etc/apt/apt.conf.d/99no-check-valid-until
+    - apt-get update
+    - >
+      apt-get install -y --no-install-recommends
+      build-essential wget ca-certificates
+      zlib1g-dev libffi-dev libssl-dev libbz2-dev
+      libreadline-dev libsqlite3-dev liblzma-dev libncurses5-dev
+    - export PY_VERSION=3.12.7
+    - wget -q https://www.python.org/ftp/python/${PY_VERSION}/Python-${PY_VERSION}.tgz
+    - tar -xzf Python-${PY_VERSION}.tgz
+    - cd Python-${PY_VERSION}
+    - ./configure --prefix=/usr/local/python3.12 --enable-shared --enable-optimizations --with-ensurepip=install
+    - make -j"$(nproc)"
+    - make altinstall
+    - cd "$CI_PROJECT_DIR"
+    - export PATH="/usr/local/python3.12/bin:${PATH}"
+    - export LD_LIBRARY_PATH="/usr/local/python3.12/lib:${LD_LIBRARY_PATH}"
+    - ln -sf /usr/local/python3.12/bin/python3.12 /usr/local/python3.12/bin/python
+    - ln -sf /usr/local/python3.12/bin/pip3.12 /usr/local/python3.12/bin/pip
   script:
     - pip install -r requirements.txt
     - pip install -e .
