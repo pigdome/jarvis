@@ -24,6 +24,7 @@ jobs:
         run: |
           docker run --rm -v "${{ github.workspace }}":/repo -w /repo debian:10 bash -lc '
             set -e
+            trap '\''echo "Container build failed at line $LINENO: $BASH_COMMAND" >&2'\'' ERR
             export DEBIAN_FRONTEND=noninteractive
             # Debian 10 (buster) is EOL and removed from the regular mirrors; use the archive instead.
             sed -i "s|deb.debian.org|archive.debian.org|g; s|security.debian.org|archive.debian.org|g" /etc/apt/sources.list
@@ -35,11 +36,17 @@ jobs:
               libreadline-dev libsqlite3-dev liblzma-dev libncurses5-dev
 
             PY_VERSION=3.12.7
+            PY_BUILD_JOBS="${PYTHON_BUILD_JOBS:-2}"
+            PY_BUILD_ROOT=/tmp/python-build
+            rm -rf "$PY_BUILD_ROOT"
+            mkdir -p "$PY_BUILD_ROOT"
+            cd "$PY_BUILD_ROOT"
+
             wget -q https://www.python.org/ftp/python/${PY_VERSION}/Python-${PY_VERSION}.tgz
             tar -xzf Python-${PY_VERSION}.tgz
             cd Python-${PY_VERSION}
-            ./configure --prefix=/usr/local/python3.12 --enable-shared --enable-optimizations --with-ensurepip=install
-            make -j"$(nproc)"
+            ./configure --prefix=/usr/local/python3.12 --enable-shared --with-ensurepip=install
+            make -j"$PY_BUILD_JOBS"
             make altinstall
             cd /repo
 
@@ -47,6 +54,7 @@ jobs:
             PYBIN=/usr/local/python3.12/bin/python3.12
             $PYBIN -m pip install --upgrade pip
             $PYBIN -m pip install -r requirements.txt
+            $PYBIN -m pip install -e .
             $PYBIN -m pip install pyinstaller
 
             /usr/local/python3.12/bin/pyinstaller --onefile \

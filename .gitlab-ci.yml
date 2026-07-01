@@ -15,6 +15,7 @@ build-binary:
   image: debian:10
   before_script:
     - export DEBIAN_FRONTEND=noninteractive
+    - export PYTHON_BUILD_JOBS="${PYTHON_BUILD_JOBS:-2}"
     # Debian 10 (buster) is EOL and removed from the regular mirrors; use the archive instead.
     - sed -i "s|deb.debian.org|archive.debian.org|g; s|security.debian.org|archive.debian.org|g" /etc/apt/sources.list
     - echo "Acquire::Check-Valid-Until \"false\";" > /etc/apt/apt.conf.d/99no-check-valid-until
@@ -25,11 +26,15 @@ build-binary:
       zlib1g-dev libffi-dev libssl-dev libbz2-dev
       libreadline-dev libsqlite3-dev liblzma-dev libncurses5-dev
     - export PY_VERSION=3.12.7
+    - export PY_BUILD_ROOT=/tmp/python-build
+    - rm -rf "$PY_BUILD_ROOT"
+    - mkdir -p "$PY_BUILD_ROOT"
+    - cd "$PY_BUILD_ROOT"
     - wget -q https://www.python.org/ftp/python/${PY_VERSION}/Python-${PY_VERSION}.tgz
     - tar -xzf Python-${PY_VERSION}.tgz
     - cd Python-${PY_VERSION}
-    - ./configure --prefix=/usr/local/python3.12 --enable-shared --enable-optimizations --with-ensurepip=install
-    - make -j"$(nproc)"
+    - ./configure --prefix=/usr/local/python3.12 --enable-shared --with-ensurepip=install
+    - make -j"$PYTHON_BUILD_JOBS"
     - make altinstall
     - cd "$CI_PROJECT_DIR"
     - export PATH="/usr/local/python3.12/bin:${PATH}"
