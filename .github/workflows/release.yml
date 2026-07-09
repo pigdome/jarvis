@@ -66,6 +66,8 @@ jobs:
               --add-data "lib:lib" \
               --clean \
               src/jarvis/main.py
+
+            chown -R "$(stat -c "%u:%g" /repo)" /repo/build /repo/dist /repo/jarvis.spec
           '
 
       - name: 📦 Compress Binary
