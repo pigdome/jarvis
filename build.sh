@@ -149,6 +149,8 @@ docker run --rm -v "$JARVIS_DIR":/repo -w /repo debian:10 bash -lc '
         --add-data "lib:lib" \
         --clean \
         src/jarvis/main.py
+
+    chown -R "$(stat -c "%u:%g" /repo)" /repo/build /repo/dist /repo/jarvis.spec 2>/dev/null || true
 '
 
 # Files written by the container are owned by root; reclaim them for the local user.

@@ -218,6 +218,7 @@ def clean_pc(
     skip_user_cache: bool = typer.Option(False, "--skip-user-cache", help="Skip Trash, thumbnails, and user cache cleanup"),
     skip_journal: bool = typer.Option(False, "--skip-journal", help="Skip systemd journal vacuum"),
     journal_days: int = typer.Option(14, "--journal-days", min=1, help="Keep this many days of systemd journal logs"),
+    journal_size: Optional[str] = typer.Option(None, "--journal-size", help="Vacuum systemd journal logs to max size (e.g. 100M)"),
 ):
     """
     Clean a local Linux PC: apt packages, user caches, trash, journals, Flatpak/Snap, and optional Docker.
@@ -228,13 +229,25 @@ def clean_pc(
     console = Console()
     home = Path.home()
     user_cache_paths = [
-        home / ".local/share/Trash/files",
-        home / ".local/share/Trash/info",
+        home / ".local/share/Trash",
         home / ".cache/thumbnails",
         home / ".cache/pip",
+        home / ".cache/uv",
         home / ".npm/_cacache",
         home / ".cache/yarn",
         home / ".cache/pnpm",
+        home / ".bun/install/cache",
+        home / ".gradle/caches",
+        home / ".cache/Cypress",
+        home / ".cache/ms-playwright",
+        home / ".cache/ms-playwright-mcp",
+        home / ".cache/mesa_shader_cache",
+        home / ".cache/mesa_shader_cache_db",
+        home / ".cache/fontconfig",
+        home / ".cache/google-chrome",
+        home / ".cache/zen",
+        home / ".cache/chromium",
+        home / ".cache/mozilla",
     ]
 
     actions = []
@@ -243,7 +256,10 @@ def clean_pc(
     if not skip_user_cache:
         actions.append("Trash, thumbnails, and common user package caches")
     if not skip_journal and _command_exists("journalctl"):
-        actions.append(f"systemd journal older than {journal_days} days")
+        journal_desc = f"systemd journal older than {journal_days} days"
+        if journal_size:
+            journal_desc += f" (or exceeding {journal_size})"
+        actions.append(journal_desc)
     if _command_exists("flatpak"):
         actions.append("unused Flatpak runtimes/apps")
     if _command_exists("snap"):
@@ -284,6 +300,11 @@ def clean_pc(
             _sudo_cmd(["journalctl", f"--vacuum-time={journal_days}d"]),
             dry_run,
         ) else 1
+        if journal_size:
+            failures += 0 if _run_cleanup_command(
+                _sudo_cmd(["journalctl", f"--vacuum-size={journal_size}"]),
+                dry_run,
+            ) else 1
     elif not skip_journal:
         console.print("[yellow]Skipping journal cleanup: journalctl command not found.[/yellow]")
 

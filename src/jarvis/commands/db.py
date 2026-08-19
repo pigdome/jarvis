@@ -2,6 +2,8 @@ import typer
 import subprocess
 from jarvis.config import get_secrets, save_secrets
 
+from typing import Optional
+
 # Removed unused LEGACY_DIR
 
 app = typer.Typer(
@@ -10,20 +12,40 @@ app = typer.Typer(
 )
 
 
-@app.command()
-def mysql():
+@app.command(
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True}
+)
+def mysql(
+    ctx: typer.Context,
+    database: Optional[str] = typer.Argument(None, help="Database name to connect to (optional)"),
+):
     """
     Open MySQL client (passwordless).
     """
-    subprocess.run(["sudo", "mysql", "--defaults-file=/etc/mysql/debian.cnf"])
+    cmd = ["sudo", "mysql", "--defaults-file=/etc/mysql/debian.cnf"]
+    if database:
+        cmd.append(database)
+    if ctx.args:
+        cmd.extend(ctx.args)
+    subprocess.run(cmd)
 
 
-@app.command()
-def psql():
+@app.command(
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True}
+)
+def psql(
+    ctx: typer.Context,
+    database: Optional[str] = typer.Argument(None, help="Database name to connect to (optional)"),
+):
     """
     Open PostgreSQL client (passwordless).
     """
-    subprocess.run(["sudo", "-u", "postgres", "psql"])
+    cmd = ["sudo", "-u", "postgres", "psql"]
+    if database:
+        cmd.append(database)
+    if ctx.args:
+        cmd.extend(ctx.args)
+    subprocess.run(cmd)
 
 
 KOHA_IGNORE_TABLES = [
