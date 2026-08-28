@@ -27,7 +27,9 @@ def mysql(
         cmd.append(database)
     if ctx.args:
         cmd.extend(ctx.args)
-    subprocess.run(cmd)
+    res = subprocess.run(cmd)
+    if res.returncode != 0:
+        raise typer.Exit(res.returncode)
 
 
 @app.command(
@@ -45,7 +47,9 @@ def psql(
         cmd.append(database)
     if ctx.args:
         cmd.extend(ctx.args)
-    subprocess.run(cmd)
+    res = subprocess.run(cmd)
+    if res.returncode != 0:
+        raise typer.Exit(res.returncode)
 
 
 KOHA_IGNORE_TABLES = [
@@ -96,7 +100,9 @@ def pg_dump(database: str = typer.Argument(..., help="Database name to dump")):
     """
     Dump a PostgreSQL database.
     """
-    subprocess.run(["sudo", "-u", "postgres", "pg_dump", database])
+    res = subprocess.run(["sudo", "-u", "postgres", "pg_dump", database])
+    if res.returncode != 0:
+        raise typer.Exit(res.returncode)
 
 
 @app.command()
@@ -125,5 +131,8 @@ def pg_restore(
     # Using the user's pipeline: pv $DUMP | gunzip | sudo -u postgres psql $DB
     # We use shell=True because of the pipes
     pipeline = f"pv {dump_file} | gunzip | sudo -u postgres psql {database}"
-    subprocess.run(pipeline, shell=True)
+    res = subprocess.run(pipeline, shell=True)
+    if res.returncode != 0:
+        console.print(f"[bold red]❌ Restore failed for {database}.[/bold red]")
+        raise typer.Exit(res.returncode)
     console.print(f"[bold green]✅ Restore complete for {database}.[/bold green]")
