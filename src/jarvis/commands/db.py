@@ -58,6 +58,8 @@ KOHA_IGNORE_TABLES = [
     "patronimage",
     "action_logs",
     "misc_files",
+    "message_queue",
+    "background_jobs",
 ]
 
 
