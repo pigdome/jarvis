@@ -76,6 +76,9 @@ System-level management and setup.
 | `jarvis sys adduser NAME` | Add a new user with sudo/ssh-key options |
 | `jarvis sys clean-pc` | Clean a Linux PC (apt, Trash, thumbnails, caches, journals, Flatpak/Snap; optional Docker) |
 | `jarvis sys upload FILE` | Upload a file to a transfer service for easy sharing |
+| `jarvis sys orca setup [PATH...]` | Turn projects into Orca orchestration projects: install `orchestration` + `orca-cli` skills locally and add the managed CLAUDE.md section (`--all-orca-repos`, `--agents`, `--force`, `--dry-run`) |
+| `jarvis sys orca status [PATH...]` | Show per project whether skills are installed and the CLAUDE.md section is present / up to date / edited / legacy |
+| `jarvis sys orca remove [PATH...]` | Remove the CLAUDE.md section and the two skill dirs (`--purge` also cleans `skills-lock.json`) |
 
 ### 🌐 net — Network & Security
 Network tools and VPN management.

@@ -1,6 +1,6 @@
 [project]
 name = "jarvis-cli"
-version = "3.0.22"
+version = "3.0.24"
 description = "JARVIS - Tools for life hack"
 authors = [
     {name = "Apirak", email = "apirak@punsarn.asia"}
