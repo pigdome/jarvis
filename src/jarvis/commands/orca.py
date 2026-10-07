@@ -1,6 +1,7 @@
 import difflib
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -22,6 +23,7 @@ TEMPLATE_NAME = "CLAUDE-orchestration.md"
 ORCA_FALLBACK = Path("/opt/Orca/resources/bin/orca-ide")
 SKILLS = ("orchestration", "orca-cli")
 DEFAULT_AGENTS = "agy,codex,qwen"
+INSTALL_TIMEOUT = 600  # seconds for `orca-ide skills install`
 
 ROLE_LINES = {
     "agy": "  - dev: AGY — main dev/agent (CLI `agy`, Orca id `antigravity`)",
@@ -335,8 +337,22 @@ def setup(
             parts.append(f"[dim]would run:[/dim] (cd {project} && {' '.join(install_cmd(orca))})")
         else:
             before = skills_installed(project)
-            res = subprocess.run(install_cmd(orca), cwd=project, text=True,
-                                 capture_output=not verbose)
+            # The installer clones the whole Orca repo (~440 MB) for two SKILL.md files:
+            # show progress, never wait on stdin/credential prompts, and cap the wait.
+            env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+            try:
+                if verbose:
+                    res = subprocess.run(install_cmd(orca), cwd=project, text=True, env=env,
+                                         stdin=subprocess.DEVNULL, timeout=INSTALL_TIMEOUT)
+                else:
+                    with console.status(f"Installing skills in {project.name} "
+                                        "(clones github.com/stablyai/orca, ~1 min)…"):
+                        res = subprocess.run(install_cmd(orca), cwd=project, text=True, env=env,
+                                             stdin=subprocess.DEVNULL, capture_output=True,
+                                             timeout=INSTALL_TIMEOUT)
+            except subprocess.TimeoutExpired:
+                res = subprocess.CompletedProcess(install_cmd(orca), 124, "",
+                                                  f"timed out after {INSTALL_TIMEOUT}s (GitHub clone stalled?)")
             if skills_installed(project):
                 parts.append("skills ✓")
                 if not before:
