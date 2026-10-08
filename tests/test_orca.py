@@ -52,6 +52,15 @@ class RenderTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             orca.parse_agents("agy,gemini")
 
+    def test_main_agent_rules(self):
+        self.assertIn("Main agent rules:", BLOCK)
+        self.assertIn("Do not do tasks by yourself", BLOCK)
+        self.assertIn("Monitor context size", BLOCK)
+        self.assertIn("`/clear` or `/compact`", BLOCK)
+        self.assertIn("Stalled or stuck workers", BLOCK)
+        self.assertIn("approval from the user", BLOCK)
+        self.assertNotIn("finishes stalled work itself", BLOCK)
+
 
 class MergeTest(unittest.TestCase):
     def test_create(self):

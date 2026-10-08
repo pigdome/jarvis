@@ -6,10 +6,11 @@
 
 One command that turns any project into an Orca orchestration project, the same setup that was done by hand in `/srv/punsarn/alpa`:
 
-- Claude is the **main** agent (coordinator and senior dev). It plans with the user and dispatches work.
+- Claude is the **main** agent (coordinator / orchestrator). It plans with the user, validates, directs workers, and monitors context. It does not do tasks directly.
 - AGY (Antigravity) is the **main dev**; Codex and Qwen are **general devs**.
 - Every worker opens in a **split pane right of Claude** (the first splits Claude's pane `--direction vertical`, later ones stack below the last worker with `horizontal`), then is handed over with `worker-start --worktree current --terminal <handle>`. `worker-start` has no placement flag, and split panes always belong to Claude's worktree (`terminal_worktree_mismatch`), so all workers share the current worktree with disjoint file ownership. A child worktree (own tab) is the fallback when tasks can't be split by file.
 - **No worker starts until the user approves the plan.**
+- **Stalled/stuck workers:** If a worker stalls, Claude can propose spawning itself to fix it, but requires explicit user approval.
 
 ```
  YOU ⇄ CLAUDE (plan)  ──"approved"──▶  CLAUDE (coordinator)
@@ -72,11 +73,15 @@ Find it the same way `sys claude-skill` finds `config/claude-skills` (`system.py
 When the user asks to delegate, orchestrate, or split work across agents, use the `orchestration` skill.
 
 - **Plan first, always.** Discuss the plan with the user before starting any worker: task split, which agent owns each task, which worktree, and how each task is verified done. Iterate until the user explicitly says "approved". Do NOT run `orchestration run-create` or `worker-start` before that.
+- **Main agent rules:**
+  1. **Do not do tasks by yourself:** Main agent must NOT perform or code tasks directly. Just check, validate, review, and order/dispatch worker agents.
+  2. **Monitor context size:** Always check context size; warn the user to start a new session (`/clear` or `/compact`) before context fills up.
+  3. **Stalled or stuck workers:** If a worker stalls or gets stuck, main agent can propose spawning itself (Claude worker) to fix it, but MUST get explicit approval from the user first. Never take over directly in the main pane without approval.
 - **Roles:**
-  - main: Claude (this pane) — main + senior dev; controls every agent. Plans, dispatches, answers worker questions, reviews, verifies, reports. Takes over any task that stalls.
+  - main: Claude (this pane) — coordinator/orchestrator; controls every agent. Plans, dispatches, answers worker questions, reviews, verifies, reports.
 {role_lines}
   - Every dev works in the current worktree, in its own split pane right of Claude (see "New worker panes" below). Their file ownership must not overlap.
-  - Claude owns the outcome, verifies every worker's "done" claim against the repo, and finishes stalled work itself.
+  - Claude owns the outcome and verifies every worker's "done" claim against the repo.
 - **New worker panes open split right.** Start every worker in a split pane, never a new tab. Claude stays on the left; workers stack in the right column:
   1. Open the pane. The first worker splits Claude's pane to the right: `orca-ide terminal split --terminal "$ORCA_TERMINAL_HANDLE" --direction vertical --command <agent-cli> --json`. Each later worker splits the last worker's pane below it: `--terminal <last-worker-handle> --direction horizontal`. Note `result.split.handle`.
   2. `orca-ide terminal wait --terminal <handle> --for tui-idle --timeout-ms 60000`

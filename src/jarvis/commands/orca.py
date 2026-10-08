@@ -12,7 +12,7 @@ from typing import List, Optional
 
 import typer
 
-from jarvis.config import BUNDLE_DIR, JARVIS_ROOT
+from jarvis.config import BUNDLE_DIR, CONFIG_DIR, JARVIS_ROOT
 
 app = typer.Typer(
     help="Orca multi-agent orchestration setup (per project)",
@@ -192,9 +192,10 @@ def section_state(content: Optional[str], block: str) -> str:
 
 def find_template() -> Optional[Path]:
     candidates = [
-        BUNDLE_DIR / "config" / "orca",                  # bundled binary or source tree
-        Path(sys.executable).parent / "config" / "orca",  # next to the binary
         JARVIS_ROOT / "orca",                             # ~/.jarvis/orca/ (user override)
+        CONFIG_DIR / "orca",                              # configured / local config dir
+        Path(sys.executable).parent / "config" / "orca",  # next to the binary
+        BUNDLE_DIR / "config" / "orca",                  # bundled binary or source tree
     ]
     for d in candidates:
         if (d / TEMPLATE_NAME).exists():
