@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 from typing import Optional, Iterable
 from jarvis.config import get_secrets, save_secrets, LEGACY_DIR, JARVIS_ROOT, CONFIG_DIR, BIN_DIR, BUNDLE_DIR
-from jarvis.commands import orca
+from jarvis.commands import orca, skill_audit
 
 app = typer.Typer(
     help="System and Infrastructure related commands",
@@ -16,6 +16,7 @@ app = typer.Typer(
 
 
 app.add_typer(orca.app, name="orca", help="Orca multi-agent orchestration setup (per project)")
+app.command(name="skill-audit")(skill_audit.skill_audit)
 
 
 @app.callback()

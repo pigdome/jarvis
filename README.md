@@ -79,6 +79,25 @@ System-level management and setup.
 | `jarvis sys orca setup [PATH...]` | Turn projects into Orca orchestration projects: install `orchestration` + `orca-cli` skills locally and add the managed CLAUDE.md section (`--all-orca-repos`, `--agents`, `--force`, `--dry-run`) |
 | `jarvis sys orca status [PATH...]` | Show per project whether skills are installed and the CLAUDE.md section is present / up to date / edited / legacy |
 | `jarvis sys orca remove [PATH...]` | Remove the CLAUDE.md section and the two skill dirs (`--purge` also cleans `skills-lock.json`) |
+| `jarvis sys skill-audit [PATH]` | Audit agent skills with NVIDIA SkillSpector (`--llm`, `--workers`, `--min-severity`, `--format`, `--fail-on`, `--include-builtin`) |
+
+#### Skill audit
+
+`jarvis sys skill-audit [PATH]` scans agent skills with
+[NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector). `PATH` can be a root
+directory to discover under (default `~`), a single skill directory, or a `SKILL.md`
+file.
+
+```bash
+jarvis sys skill-audit ~/.claude/skills --no-llm
+jarvis sys skill-audit ~/.claude/skills --min-severity high --fail-on critical
+jarvis sys skill-audit ~/.claude/skills --format json
+```
+
+Reports are written to `~/.jarvis/reports/skill-audit-<timestamp>/` (`summary.json`,
+`summary.md`, and one JSON report per skill). SkillSpector is auto-installed with
+`uv tool install git+https://github.com/NVIDIA/skillspector.git` on first use.
+Vendor/builtin trees are skipped unless `--include-builtin` is passed.
 
 ### 🌐 net — Network & Security
 Network tools and VPN management.
