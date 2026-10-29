@@ -232,7 +232,16 @@ def test_skill_slug_is_sanitized(tmp_path):
     home = tmp_path / "home"
     path = home / ".claude" / "skills" / "a b"
     path.mkdir(parents=True)
-    assert sa.skill_slug(path, home) == "claude__skills__a-b"
+    assert sa.skill_slug(path, home).startswith("claude__skills__a-b-")
+
+
+def test_skill_slug_is_unique_when_sanitized_names_collide(tmp_path):
+    home = tmp_path / "home"
+    a = home / ".claude" / "skills" / "a b"
+    b = home / ".claude" / "skills" / "a-b"
+    a.mkdir(parents=True)
+    b.mkdir(parents=True)
+    assert sa.skill_slug(a, home) != sa.skill_slug(b, home)
 
 
 # ---------------------------------------------------------------------------
@@ -281,6 +290,16 @@ def test_should_fail_thresholds():
     assert not sa.should_fail([medium], "high")
     assert not sa.should_fail([high], "none")
     assert not sa.should_fail([clean], "low")
+
+
+def test_should_fail_closed_on_errors_and_do_not_install(tmp_path):
+    errored = sa._error_report(tmp_path / "broken", "timed out after 120s")
+    blocked = make_report()
+    blocked.recommendation = "DO_NOT_INSTALL"
+
+    assert sa.should_fail([errored], "critical")
+    assert sa.should_fail([blocked], "critical")
+    assert not sa.should_fail([errored, blocked], "none")
 
 
 # ---------------------------------------------------------------------------

@@ -243,8 +243,10 @@ def skill_slug(skill: Path, home: Optional[Path] = None) -> str:
     except ValueError:
         relative = Path(str(Path(skill).resolve()).lstrip(os.sep))
     slug = "__".join(relative.parts)
-    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", slug).strip("-.")
-    return slug or "skill"
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", slug).strip("-.") or "skill"
+    # Sanitizing can map distinct paths to one name; the hash keeps reports apart.
+    digest = hashlib.sha1(str(Path(skill).resolve()).encode("utf-8")).hexdigest()[:10]
+    return f"{slug}-{digest}"
 
 
 # ---------------------------------------------------------------------------
@@ -334,9 +336,12 @@ def top_finding(report: SkillReport, min_severity: str = "medium") -> str:
 def should_fail(reports: Sequence[SkillReport], fail_on: str = "high") -> bool:
     if fail_on == "none":
         return False
+    # Fail closed: an unscanned skill or a DO_NOT_INSTALL verdict is never a pass.
     threshold = severity_rank(fail_on)
-    return any(severity_rank(f.severity) >= threshold
-               for report in reports for f in report.findings)
+    return any(not report.ok
+               or report.recommendation in ("DO_NOT_INSTALL", "DO NOT INSTALL")
+               or any(severity_rank(f.severity) >= threshold for f in report.findings)
+               for report in reports)
 
 
 def sort_reports(reports: Sequence[SkillReport]) -> List[SkillReport]:
