@@ -36,6 +36,11 @@ organization = "text"
 phone = "phone"
 reason_description = "text"
 attendance_list = "json"      # [{"id": patron_id, "name": ...}]
+passcode = "null"             # door access codes
+passcode_pin = "null"
+
+[tables.booking_room]
+qr_code_token = { strategy = "id", unique = true }   # printed check-in URLs
 
 [tables.booking_suspension]
 reason = "text"
