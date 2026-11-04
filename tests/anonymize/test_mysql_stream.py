@@ -259,3 +259,35 @@ def test_unless_column_missing_still_anonymizes(tmp_path):
         rewriter.feed(line)
     out = rewriter.feed(b"INSERT INTO `borrowers` VALUES (1,'real@person.th');\n")
     assert b"real@person.th" not in out
+
+
+def test_unterminated_create_rejected():
+    rewriter = make()
+    rewriter.feed(b"CREATE TABLE `borrowers` (\n")
+    rewriter.feed(b"  `borrowernumber` int(11) NOT NULL,\n")
+    with pytest.raises(DumpFormatError):
+        rewriter.feed(b"INSERT INTO `borrowers` VALUES (1,'a@b.c');\n")
+
+
+def test_create_open_at_end_rejected():
+    rewriter = make()
+    rewriter.feed(b"CREATE TABLE `borrowers` (\n")
+    with pytest.raises(DumpFormatError):
+        rewriter.finish()
+
+
+def test_create_ending_with_semicolon_closes():
+    rewriter = make()
+    for line in (b"CREATE TABLE `borrowers` (`borrowernumber` int(11),\n",
+                 b"  `email` varchar(100));\n"):
+        rewriter.feed(line)
+    out = rewriter.feed(b"INSERT INTO `borrowers` VALUES (1,'real@person.th');\n")
+    assert b"real@person.th" not in out
+
+
+def test_lowercase_insert_is_rewritten():
+    rewriter = make()
+    for line in CREATE_BORROWERS:
+        rewriter.feed(line)
+    out = rewriter.feed(b"  insert into `borrowers` values (1,'real@person.th');\n")
+    assert b"real@person.th" not in out

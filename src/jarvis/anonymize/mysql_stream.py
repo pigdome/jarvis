@@ -18,11 +18,12 @@ from .strategies import Faker
 _CREATE_RE = re.compile(
     rb"^CREATE TABLE\s+(?:IF NOT EXISTS\s+)?`([^`]+)`", re.IGNORECASE
 )
+_ANY_DATA_RE = re.compile(rb"^\s*(?:INSERT|REPLACE)\b", re.IGNORECASE)
 _INSERT_RE = re.compile(
-    rb"^INSERT INTO\s+`([^`]+)`(?:\s*\(([^)]*)\))?\s+VALUES\b", re.IGNORECASE
+    rb"^\s*INSERT\s+INTO\s+`([^`]+)`(?:\s*\(([^)]*)\))?\s+VALUES\b", re.IGNORECASE
 )
 _OTHER_INSERT_RE = re.compile(
-    rb"^(?:INSERT\s+(?:IGNORE|DELAYED|LOW_PRIORITY|HIGH_PRIORITY)\s+(?:INTO\s+)?"
+    rb"^\s*(?:INSERT\s+(?:IGNORE|DELAYED|LOW_PRIORITY|HIGH_PRIORITY)\s+(?:INTO\s+)?"
     rb"|REPLACE\s+(?:INTO\s+)?)`([^`]+)`",
     re.IGNORECASE,
 )
@@ -285,6 +286,10 @@ class MysqlRewriter:
             return self._flush_pending()
 
         if self._create_table is not None:
+            if _ANY_DATA_RE.match(line) or _CREATE_RE.match(line):
+                raise DumpFormatError(
+                    f"CREATE TABLE `{self._create_table}` is not terminated"
+                )
             self._create_lines.append(line)
             if self._create_complete(line):
                 self._finish_create()
@@ -309,7 +314,7 @@ class MysqlRewriter:
                 )
             return line
 
-        if line.startswith(b"INSERT INTO"):
+        if _ANY_DATA_RE.match(line):
             self._saw_insert = True
             if _INSERT_RE.match(line) is None:
                 raise DumpFormatError(
@@ -346,6 +351,10 @@ class MysqlRewriter:
         """Reject a dump that was cut mid-statement or has no MySQL statements."""
         if self._pending is not None:
             raise DumpFormatError("unterminated INSERT statement at end of dump")
+        if self._create_table is not None:
+            raise DumpFormatError(
+                f"CREATE TABLE `{self._create_table}` is not terminated at end of dump"
+            )
         if not self._saw_create and not self._saw_insert:
             raise DumpFormatError(
                 "no MySQL statements found (expected CREATE TABLE and INSERT INTO)"
@@ -359,7 +368,12 @@ class MysqlRewriter:
 
     @staticmethod
     def _create_complete(line: bytes) -> bool:
-        return line.lstrip().startswith(b")") or b") ENGINE" in line.upper()
+        stripped = line.lstrip()
+        return (
+            stripped.startswith(b")")
+            or b") ENGINE" in line.upper()
+            or line.rstrip().endswith(b";")
+        )
 
     def _start_insert(self, line: bytes) -> None:
         match = _INSERT_RE.match(line)
