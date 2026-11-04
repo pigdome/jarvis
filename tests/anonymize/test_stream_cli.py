@@ -182,13 +182,6 @@ def test_type_mismatch():
     assert "koha" in result.stderr
 
 
-def test_direct_mode_not_implemented():
-    result = invoke(["-p", "koha", "-t", "mysql", "-d", "koha_spu"])
-
-    assert result.exit_code == 1
-    assert "direct mode not implemented yet" in result.stderr
-
-
 def test_type_without_database_rejected():
     result = invoke(["-p", "koha", "-t", "mysql"])
 

@@ -135,6 +135,11 @@ def anonymize(
     """
     from rich.console import Console
 
+    from jarvis.anonymize.direct import (
+        ConfirmationError,
+        DirectError,
+        run_direct,
+    )
     from jarvis.anonymize.errors import DumpFormatError, ProfileError
     from jarvis.anonymize.profile import list_profiles, load_profile
     from jarvis.anonymize.strategies import Faker
@@ -185,8 +190,30 @@ def anonymize(
                 highlight=False,
             )
             raise typer.Exit(1)
-        console.print("direct mode not implemented yet", markup=False, highlight=False)
-        raise typer.Exit(1)
+        try:
+            direct_report = run_direct(
+                loaded,
+                type_,
+                database,
+                dry_run=dry_run,
+                assume_yes=yes,
+                out=sys.stdout,
+            )
+        except ProfileError as exc:
+            console.print(str(exc), markup=False, highlight=False)
+            raise typer.Exit(1)
+        except ConfirmationError as exc:
+            console.print(str(exc), markup=False, highlight=False)
+            raise typer.Exit(1)
+        except DirectError as exc:
+            console.print(
+                f"anonymize failed: {exc}", markup=False, highlight=False
+            )
+            raise typer.Exit(3)
+
+        if not quiet and not dry_run:
+            direct_report.render(console)
+        return
 
     if sys.stdin.isatty():
         console.print(
