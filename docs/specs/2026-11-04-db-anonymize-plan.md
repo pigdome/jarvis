@@ -270,7 +270,7 @@ Seed (สังเคราะห์ทั้งหมด) ต้องมีอ
 - แถว: แยกด้วย `\t`, `\N` = NULL, unescape `\\ \t \n \r \b \f \v \ooo \xhh` ก่อนส่ง Faker, escape กลับเฉพาะ cell ที่แก้; cell ที่ไม่แก้ bytes เดิม; จบที่บรรทัด `\.`
 - truncate: ทิ้งแถวข้อมูล คง header และ `\.`
 - `INSERT INTO` ของตารางที่มีกฎ → `DumpFormatError` (ไม่รองรับ `--inserts`)
-- `by_metadata_field`: จาก COPY `metadataschemaregistry` เก็บ `metadata_schema_id → short_id`; จาก `metadatafieldregistry` เก็บ `metadata_field_id → "short_id.element[.qualifier]"`; ในแถว `metadatavalue` ใช้ `metadata_field_id` หา rule แล้วแก้ `text_value`. เจอ COPY `metadatavalue` ก่อนมี map ทั้งสอง → `DumpFormatError`
+- `by_metadata_field`: pg_dump จริงเรียง COPY เป็น `metadatafieldregistry` → `metadataschemaregistry` → `metadatavalue` (ยืนยันจาก fixture Task 3) — เก็บแถว field ดิบ (`metadata_field_id, metadata_schema_id, element, qualifier`) และ map schema (`metadata_schema_id → short_id`) แล้ว resolve เป็น `metadata_field_id → "short_id.element[.qualifier]"` ตอนเริ่ม COPY `metadatavalue`; ในแถว `metadatavalue` ใช้ `metadata_field_id` หา rule แล้วแก้ `text_value`. เจอ COPY `metadatavalue` ก่อนเห็นทั้งสอง registry → `DumpFormatError`
 - `restrict_key`: จับจากบรรทัด `\restrict KEY` (ส่งผ่านตามเดิม)
 
 - [ ] **Step 1: test ที่ fail** (ใช้ dspace + room_reservation profile กับ `PG_DUMP`)
