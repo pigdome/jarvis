@@ -17,7 +17,9 @@ truncate = [
   "action_logs", "message_queue", "search_history", "linktracker",
   "saved_reports", "problem_reports",
   # photos / ID scans (blobs cannot be rewritten)
-  "patronimage", "borrower_files",
+  "patronimage", "borrower_files", "misc_files",
+  # catalog-problem tickets: patron-written threads
+  "tickets", "ticket_updates",
   # statistics with quasi-identifiers
   "pseudonymized_transactions", "pseudonymized_metadata_values",
   "pseudonymized_borrower_attributes",
