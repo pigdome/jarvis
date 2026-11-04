@@ -8,6 +8,7 @@ loudly instead of restoring a half-anonymized dump.
 
 from __future__ import annotations
 
+import itertools
 import time
 from typing import BinaryIO
 
@@ -19,6 +20,22 @@ from .report import Report
 from .strategies import Faker
 
 POISON_SQL = b"JARVIS_ANONYMIZE_FAILED;\n"
+
+# Header lines that identify the dump's engine. Checked before anything is
+# written, so a wrong-engine dump never reaches the restore client (its text
+# could leave the client inside an open quote and swallow the poison).
+_MYSQL_MARKERS = (b"-- MySQL dump", b"-- MariaDB dump", b"/*M!", b"/*!40")
+_PG_MARKERS = (b"-- PostgreSQL database dump", b"\\restrict ", b"SET statement_timeout")
+_SNIFF_LINES = 40
+
+
+def _sniff_engine(lines: list[bytes]) -> str | None:
+    for line in lines:
+        if line.startswith(_MYSQL_MARKERS):
+            return "mysql"
+        if line.startswith(_PG_MARKERS):
+            return "psql"
+    return None
 
 
 def _make_rewriter(
@@ -70,7 +87,19 @@ def run_stream(
 
     started = time.perf_counter()
     try:
-        for line in inp:
+        lines = iter(inp)
+        head: list[bytes] = []
+        for line in lines:
+            head.append(line)
+            if len(head) >= _SNIFF_LINES:
+                break
+        detected = _sniff_engine(head)
+        if detected is not None and detected != profile.engine:
+            raise DumpFormatError(
+                f"this looks like a {detected} dump but profile "
+                f"{profile.name!r} is for {profile.engine}"
+            )
+        for line in itertools.chain(head, lines):
             report.bytes_in += len(line)
             chunk = rewriter.feed(line)
             if chunk is not None:

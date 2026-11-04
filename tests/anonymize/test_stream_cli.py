@@ -250,3 +250,24 @@ def test_unexpected_error_still_poisons(monkeypatch):
     with pytest.raises(DFE):
         stream_mod.run_stream(lp("koha"), io.BytesIO(b"-- x\n"), out)
     assert out.getvalue().endswith(stream_mod.POISON_SQL)
+
+
+@pytest.mark.parametrize(
+    "fixture,profile_name",
+    [("mysql_dump.sql", "dspace"), ("pg_dump.sql", "koha")],
+)
+def test_wrong_engine_dump_emits_only_poison(fixture, profile_name):
+    import io
+
+    from jarvis.anonymize import stream as stream_mod
+    from jarvis.anonymize.errors import DumpFormatError as DFE
+    from jarvis.anonymize.profile import load_profile as lp
+
+    data = (Path(__file__).resolve().parent.parent / "fixtures" / "anonymize" / fixture).read_bytes()
+    out = io.BytesIO()
+    with pytest.raises(DFE):
+        stream_mod.run_stream(lp(profile_name), io.BytesIO(data), out)
+    # Nothing from the foreign dump may reach the client before the poison.
+    assert stream_mod.POISON_SQL in out.getvalue()
+    assert data[:200] not in out.getvalue()
+    assert len(out.getvalue()) < 300
