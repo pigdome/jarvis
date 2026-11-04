@@ -718,3 +718,21 @@ def test_password_prefix_only_for_known_hashes(engine):
     expr = _password_expr(engine, "`p`" if engine == "mysql" else '"p"')
     assert "pbkdf2_" in expr and "2[abxy]" in expr
     assert ("REGEXP" in expr) if engine == "mysql" else (" ~ " in expr)
+
+
+@pytest.mark.parametrize(
+    ("engine", "block", "column"),
+    [
+        ("mysql", "MD5(RAND())", "`password`"),
+        ("psql", "md5(random()::text)", '"password"'),
+    ],
+)
+def test_password_expression_covers_long_hashes(engine, block, column):
+    """DSpace stores 128-character hex hashes; the random part must reach it."""
+    from jarvis.anonymize.direct import _password_expr
+
+    short = _password_expr(engine, column)
+    long = _password_expr(engine, column, 128)
+
+    assert short.count(block) == 2
+    assert long.count(block) == 4

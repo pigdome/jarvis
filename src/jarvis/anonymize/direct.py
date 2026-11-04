@@ -80,9 +80,20 @@ def _concat(engine: str, *parts: str) -> str:
     return "(" + " || ".join(parts) + ")"
 
 
-def _take(engine: str, block: str, length: int | str) -> str:
-    """Cut ``block`` (32 random hex chars) down to ``length`` characters."""
-    repeats = max(1, math.ceil(length / 32)) if isinstance(length, int) else 2
+def _take(
+    engine: str, block: str, length: int | str, *, limit: int | None = None
+) -> str:
+    """Cut ``block`` (32 random hex chars) down to ``length`` characters.
+
+    ``length`` may be a SQL expression such as ``length(col)``; ``limit`` (the
+    column width) then decides how many copies of the block to concatenate.
+    Two copies cover the usual 64-character hashes, four cover DSpace's
+    128-character hex passwords.
+    """
+    if isinstance(length, int):
+        repeats = max(1, math.ceil(length / 32))
+    else:
+        repeats = max(2, math.ceil((limit or 64) / 32))
     return f"LEFT({_concat(engine, *([block] * repeats))}, {length})"
 
 
@@ -188,7 +199,7 @@ _HASH_PREFIX_RE = (
 )
 
 
-def _password_expr(engine: str, ref: str) -> str:
+def _password_expr(engine: str, ref: str, max_len: int | None = None) -> str:
     if engine == "mysql":
         prefix = (
             f"IF({ref} REGEXP '{_HASH_PREFIX_RE}', CONCAT(SUBSTRING_INDEX({ref},"
@@ -198,7 +209,12 @@ def _password_expr(engine: str, ref: str) -> str:
         return _concat(
             engine,
             prefix,
-            _take(engine, _MD5[engine], _char_length(engine, ref)),
+            _take(
+                engine,
+                _MD5[engine],
+                _char_length(engine, ref),
+                limit=max_len,
+            ),
         )
     prefix = (
         f"CASE WHEN {ref} ~ '{_HASH_PREFIX_RE}'"
@@ -207,7 +223,7 @@ def _password_expr(engine: str, ref: str) -> str:
     return _concat(
         engine,
         prefix,
-        _take(engine, _MD5[engine], f"length({ref})"),
+        _take(engine, _MD5[engine], f"length({ref})", limit=max_len),
     )
 
 
@@ -229,9 +245,14 @@ def _plain_expr(
     elif strategy == "digits":
         body = _take(engine, _digit_block(engine), _char_length(engine, ref))
     elif strategy == "id":
-        body = _take(engine, _MD5[engine], _char_length(engine, ref))
+        body = _take(
+            engine,
+            _MD5[engine],
+            _char_length(engine, ref),
+            limit=column.max_len,
+        )
     elif strategy == "password":
-        body = _password_expr(engine, ref)
+        body = _password_expr(engine, ref, column.max_len)
     elif strategy == "date":
         body = _date_expr(engine, column.data_type)
     elif strategy == "ip":
