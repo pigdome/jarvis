@@ -379,5 +379,7 @@ def test_lowercase_indented_copy_is_rewritten():
 
 def test_unregistered_metadata_field_reported():
     _, rewriter = rewrite(PG_DUMP.read_bytes())
-    # The fixture registers eperson.* and dc.* but not person.email.
-    assert ("metadatavalue", "person.email") in rewriter.report.missing_columns
+    # The fixture registers person.email but not person.telephone/birthDate.
+    missing = rewriter.report.missing_columns
+    assert ("metadatavalue", "person.telephone") in missing
+    assert ("metadatavalue", "person.email") not in missing
