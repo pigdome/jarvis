@@ -144,3 +144,19 @@ def test_unique_exhausted():
         fake(faker, "digits", "1", key="t.c", max_len=1, unique=True)
     with pytest.raises(DumpFormatError):
         fake(faker, "digits", "1", key="t.c", max_len=1, unique=True)
+
+
+def test_password_unknown_format_fully_replaced():
+    faker = Faker(random.Random(3))
+    for original in ("my$ecretPass", "plain-password", "$", "abc$"):
+        value = faker.fake(Rule("password"), original, key="t.p")
+        assert value != original
+        assert "ecret" not in value and not value.startswith("my")
+
+
+def test_date_drops_non_time_suffix():
+    faker = Faker(random.Random(4))
+    value = faker.fake(Rule("date"), "1990-05-01 สมชาย ใจดี", key="t.d")
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", value)
+    value = faker.fake(Rule("date"), "1990-05-01T10:11:12+07:00", key="t.d")
+    assert value.endswith("T10:11:12+07:00")

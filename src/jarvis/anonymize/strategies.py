@@ -21,6 +21,15 @@ _BCRYPT = "./" + _UPPER + _LOWER + _DIGITS
 _BASE64 = _UPPER + _LOWER + _DIGITS + "+/"
 
 _DATE_PREFIX = re.compile(r"^(\d{4})-(\d{2})-(\d{2})")
+# Only a clean time/zone suffix may follow a date; anything else is dropped.
+_TIME_SUFFIX = re.compile(
+    r"^([ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?)?(Z|[+-]\d{2}(:?\d{2})?)?$"
+)
+# Hash prefixes kept by the password strategy (algorithm/cost/salt only).
+_HASH_PREFIX = re.compile(
+    r"^(\$(2[abxy]?|1|5|6|argon2(id|i|d))\$[^$]*\$(?:[^$]*\$)?"
+    r"|(pbkdf2_\w+|argon2|bcrypt_sha256|scrypt)\$[^$]*\$(?:[^$]*\$)*)"
+)
 _TEXT_MAX = 200
 _REROLLS = 20
 _MAX_GROWTH = 64
@@ -140,6 +149,8 @@ class Faker:
             if (year, month, day) == ("0000", "00", "00"):
                 return original
             rest = original[match.end() :]
+            if not _TIME_SUFFIX.match(rest):
+                rest = ""
         else:
             rest = ""
         fake_year = self.rng.randint(1950, 2005)
@@ -148,15 +159,14 @@ class Faker:
         return f"{fake_year:04d}-{fake_month:02d}-{fake_day:02d}{rest}"
 
     def _password(self, original: str, extra: int) -> str:
-        cut = original.rfind("$")
-        if cut >= 0:
-            prefix, rest = original[: cut + 1], original[cut + 1 :]
+        match = _HASH_PREFIX.match(original)
+        if match and match.end() < len(original):
+            prefix, rest = original[: match.end()], original[match.end() :]
         else:
+            # Unknown format (maybe plaintext): replace the whole value.
             prefix, rest = "", original
 
-        length = len(rest) + extra
-        if length == 0:
-            return prefix
+        length = max(len(rest) + extra, 1)
 
         alphabet = self._password_alphabet(rest)
         body = self._pick(alphabet, length)
