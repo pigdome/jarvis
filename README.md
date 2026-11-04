@@ -65,6 +65,38 @@ Direct database access and maintenance. Now supports passwordless access via `su
 | `jarvis db pg-restore DB FILE` | Drop, Create, and Restore Postgres from `.sql.gz` dump |
 | `jarvis db pg-dump DB` | Dump a PostgreSQL database |
 | `jarvis db mysqldump DB` | Dump a MySQL database |
+| `jarvis db anonymize` | Replace personal data in a SQL dump stream or in a restored database |
+
+#### Anonymize
+
+`jarvis db anonymize` replaces personal data in a SQL dump stream, or in a
+database that is already restored, according to a bundled profile (`koha`,
+`dspace`, `room_reservation`, `linebrarian`) or your own TOML file. Keys,
+foreign keys and every column the profile does not list are passed through
+unchanged.
+
+```bash
+# stream: dump -> anonymize -> restore
+pv dump.sql.gz | gunzip | jarvis db anonymize -p koha   | jarvis db mysql koha_spu
+pv dump.sql.gz | gunzip | jarvis db anonymize -p dspace | jarvis db psql dspace8_nalt
+
+# list the bundled profiles
+jarvis db anonymize --list
+
+# direct mode (database is already restored): asks you to type the
+# database name to confirm; --yes skips the question (for scripts)
+jarvis db anonymize -p koha -t mysql -d koha_spu
+jarvis db anonymize -p koha -t mysql -d koha_spu --yes
+jarvis db anonymize -p dspace -t psql -d dspace8_spu --dry-run   # print SQL only
+
+# your own profile
+jarvis db anonymize --profile-file ./my-profile.toml < dump.sql > anonymized.sql
+```
+
+Run the restore side under `set -o pipefail` so a failed anonymize stops the
+pipeline instead of restoring a partial dump.
+
+Output is pseudonymized test data — still handle under PDPA s.37.
 
 ### 🏗️ sys — Infrastructure & System
 System-level management and setup.
