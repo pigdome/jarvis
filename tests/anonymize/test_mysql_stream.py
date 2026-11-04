@@ -291,3 +291,11 @@ def test_lowercase_insert_is_rewritten():
         rewriter.feed(line)
     out = rewriter.feed(b"  insert into `borrowers` values (1,'real@person.th');\n")
     assert b"real@person.th" not in out
+
+
+def test_ruled_table_absent_reported():
+    _, rewriter = rewrite(MYSQL_DUMP.read_bytes())
+    missing = rewriter.report.missing_tables
+    assert "deletedborrowers" in missing      # ruled, not in the fixture
+    assert "borrowers" not in missing
+    assert "sessions" not in missing          # truncate-only tables are ignored

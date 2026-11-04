@@ -359,6 +359,10 @@ class MysqlRewriter:
             raise DumpFormatError(
                 "no MySQL statements found (expected CREATE TABLE and INSERT INTO)"
             )
+        # A ruled table that never appeared may be a typo in the profile.
+        for table in self._tables:
+            if table not in self._columns:
+                self.report.missing_tables.add(table)
 
     # -- statement detection ------------------------------------------------
 

@@ -24,6 +24,7 @@ class Report:
     tables: dict[str, TableStats] = field(default_factory=dict)
     missing_columns: set[tuple[str, str]] = field(default_factory=set)
     suspicious_columns: set[tuple[str, str]] = field(default_factory=set)
+    missing_tables: set[str] = field(default_factory=set)
     bytes_in: int = 0
     seconds: float = 0.0
 
@@ -63,6 +64,12 @@ class Report:
                     str(stats.truncated_rows),
                 )
             console.print(table)
+
+        if self.missing_tables:
+            console.print(
+                "[yellow]Profile tables with rules not found in the dump:[/yellow] "
+                + escape(", ".join(sorted(self.missing_tables)))
+            )
 
         if self.missing_columns:
             columns = ", ".join(

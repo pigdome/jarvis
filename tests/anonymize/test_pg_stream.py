@@ -383,3 +383,10 @@ def test_unregistered_metadata_field_reported():
     missing = rewriter.report.missing_columns
     assert ("metadatavalue", "person.telephone") in missing
     assert ("metadatavalue", "person.email") not in missing
+
+
+def test_ruled_table_absent_reported():
+    _, rewriter = rewrite(PG_DUMP.read_bytes())
+    missing = rewriter.report.missing_tables
+    assert "requestitem" in missing           # ruled, not in the fixture
+    assert "eperson" not in missing

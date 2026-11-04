@@ -232,6 +232,7 @@ class PgRewriter:
         self.in_copy = False
         self.restrict_key: str | None = None
         self._saw_copy = False
+        self._seen_tables: set[str] = set()
 
         self._create_table: str | None = None
         self._create_lines: list[bytes] = []
@@ -324,6 +325,10 @@ class PgRewriter:
             raise DumpFormatError(
                 "no PostgreSQL COPY blocks found (expected COPY ... FROM stdin)"
             )
+        # A ruled table that never appeared may be a typo in the profile.
+        for table in self._tables:
+            if table not in self._seen_tables:
+                self.report.missing_tables.add(table)
 
     # -- CREATE TABLE -------------------------------------------------------
 
@@ -356,6 +361,7 @@ class PgRewriter:
 
     def _start_copy(self, match: re.Match[bytes]) -> None:
         self._saw_copy = True
+        self._seen_tables.add(_table_name(match.group(1)).lower())
         self.in_copy = True
 
         table = _table_name(match.group(1))

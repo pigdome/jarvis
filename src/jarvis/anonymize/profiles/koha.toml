@@ -246,3 +246,9 @@ requestor_id = "null"
 api_key = "null"
 requestor_name = "name"
 requestor_email = "email"
+
+# Vendor portal account (Koha stores the password reversibly encrypted)
+[tables.aqbookseller_interfaces]
+login = "null"
+password = "null"
+account_email = "email"
