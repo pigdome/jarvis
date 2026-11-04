@@ -375,3 +375,9 @@ def test_lowercase_indented_copy_is_rewritten():
     rewriter.feed(b"  copy public.eperson (uuid, email) from stdin;\n")
     out = rewriter.feed(b"11111111-1111-1111-1111-111111111111\treal@person.th\n")
     assert b"real@person.th" not in out
+
+
+def test_unregistered_metadata_field_reported():
+    _, rewriter = rewrite(PG_DUMP.read_bytes())
+    # The fixture registers eperson.* and dc.* but not person.email.
+    assert ("metadatavalue", "person.email") in rewriter.report.missing_columns

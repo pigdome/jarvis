@@ -467,8 +467,12 @@ class PgRewriter:
             field_id = value("metadata_field_id")
             schema_id = value("metadata_schema_id")
             element = value("element")
-            if field_id and schema_id and element:
-                self._fields[field_id] = (schema_id, element, value("qualifier"))
+            if not (field_id and schema_id and element):
+                raise DumpFormatError(
+                    "metadatafieldregistry row lacks metadata_field_id, "
+                    "metadata_schema_id or element"
+                )
+            self._fields[field_id] = (schema_id, element, value("qualifier"))
         else:
             schema_id = value("metadata_schema_id")
             short_id = value("short_id")
@@ -490,16 +494,26 @@ class PgRewriter:
             lookup.setdefault(name.lower(), rule)
 
         resolved: dict[str, Rule] = {}
+        matched: set[str] = set()
         for field_id, (schema_id, element, qualifier) in self._fields.items():
             schema = self._schemas.get(schema_id)
             if schema is None:
-                continue
+                raise DumpFormatError(
+                    f"metadatafieldregistry row {field_id} points to unknown "
+                    f"metadata_schema_id {schema_id}"
+                )
             name = f"{schema}.{element}"
             if qualifier is not None:
                 name += f".{qualifier}"
             rule = lookup.get(name, lookup.get(name.lower()))
             if rule is not None:
                 resolved[field_id] = rule
+                matched.add(name.lower())
+        for name in by_metadata_field:
+            if name.lower() not in matched:
+                # Field not registered in this install: nothing to rewrite,
+                # but surface it in the report like a missing column.
+                self.report.missing_columns.add(("metadatavalue", name))
         return resolved
 
     def _rewrite_row(self, body: bytes, ending: bytes) -> bytes:
