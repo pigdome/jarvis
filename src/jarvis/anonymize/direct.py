@@ -644,7 +644,9 @@ def build_sql(
         for key, column in info.columns.items():
             if key.lower() in rule_map:
                 continue
-            if looks_like_pii(column.name):
+            if looks_like_pii(column.name) and not profile.keeps(
+                db_table, column.name
+            ):
                 report.suspicious_columns.add((db_table.lower(), column.name))
 
     if engine == "mysql":

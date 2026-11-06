@@ -13,6 +13,7 @@ engine = "mysql"            # mysql | psql
 description = "..."
 truncate = ["sessions", ...] # tables whose rows are dropped (schema kept)
 email_tld = "invalid"        # optional; fake emails: <random>@<random>.<tld>
+keep = ["branches.*", "items.datelastseen"]  # optional; columns that look like PII but are kept on purpose (silences the warning)
 
 [tables.<table>]
 <column> = "<strategy>"                          # short form

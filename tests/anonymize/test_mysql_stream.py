@@ -299,3 +299,25 @@ def test_ruled_table_absent_reported():
     assert "deletedborrowers" in missing      # ruled, not in the fixture
     assert "borrowers" not in missing
     assert "sessions" not in missing          # truncate-only tables are ignored
+
+
+def test_keep_silences_suspicious_columns():
+    rewriter = make()
+    for line in (
+        b"CREATE TABLE `branches` (\n",
+        b"  `branchcode` varchar(10) NOT NULL,\n",
+        b"  `branchemail` mediumtext,\n",
+        b"  PRIMARY KEY (`branchcode`)\n",
+        b") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n",
+        b"CREATE TABLE `ps_book_delivery` (\n",
+        b"  `id` int(11) NOT NULL AUTO_INCREMENT,\n",
+        b"  `mobile` varchar(255) DEFAULT NULL,\n",
+        b"  `home_phone` varchar(255) DEFAULT NULL,\n",
+        b"  PRIMARY KEY (`id`)\n",
+        b") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n",
+    ):
+        rewriter.feed(line)
+    suspicious = rewriter.report.suspicious_columns
+    assert ("branches", "branchemail") not in suspicious      # keep = branches.*
+    assert ("ps_book_delivery", "mobile") not in suspicious   # has a rule
+    assert ("ps_book_delivery", "home_phone") in suspicious   # neither

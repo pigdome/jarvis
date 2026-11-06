@@ -25,6 +25,22 @@ truncate = [
   "pseudonymized_borrower_attributes",
 ]
 
+# Columns that match the PII name pattern but are kept on purpose
+# (organisation contact details, yes/no flags, item dates). Listed here
+# so the report only warns about columns nobody has looked at yet.
+keep = [
+  "branches.*",                      # library branch, not a person
+  "aqbooksellers.*",                 # vendor company
+  "borrowers.gonenoaddress",         # flag
+  "deletedborrowers.gonenoaddress",  # flag
+  "categories.dateofbirthrequired",  # setting
+  "club_templates.is_email_required",
+  "items.datelastborrowed",
+  "items.datelastseen",
+  "deleteditems.datelastborrowed",
+  "deleteditems.datelastseen",
+]
+
 [tables.borrowers]
 cardnumber = { strategy = "digits", unique = true }
 userid = { strategy = "id", unique = true }
@@ -252,3 +268,10 @@ requestor_email = "email"
 login = "null"
 password = "null"
 account_email = "email"
+
+# Punsarn plugin: book delivery / return requests
+[tables.ps_book_delivery]
+mobile = "phone"
+location = "text"            # delivery address written by the patron
+note = "text"
+staff_message = "text"

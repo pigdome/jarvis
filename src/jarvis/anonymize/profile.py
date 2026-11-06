@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import tomllib
 from dataclasses import dataclass
 from importlib.resources import files
@@ -30,7 +31,9 @@ STRATEGIES: frozenset[str] = frozenset(
 ENGINES: frozenset[str] = frozenset({"mysql", "psql"})
 DEFAULT_EMAIL_TLD = "invalid"
 
-_PROFILE_KEYS = frozenset({"name", "engine", "description", "truncate", "email_tld"})
+_PROFILE_KEYS = frozenset(
+    {"name", "engine", "description", "truncate", "email_tld", "keep"}
+)
 _TOP_LEVEL_KEYS = frozenset({"profile", "tables"})
 _TABLE_SECTIONS = frozenset({"when", "unless", "by_metadata_field"})
 _RULE_KEYS = frozenset({"strategy", "unique"})
@@ -58,6 +61,12 @@ class Profile:
     truncate: frozenset[str]
     email_tld: str
     tables: dict[str, TableRules]
+    keep: frozenset[str] = frozenset()
+
+    def keeps(self, table: str, column: str) -> bool:
+        """True when ``table.column`` is listed in ``keep`` (kept on purpose)."""
+        table, column = table.lower(), column.lower()
+        return f"{table}.{column}" in self.keep or f"{table}.*" in self.keep
 
 
 def _make_rule(value: Any, where: str) -> Rule:
@@ -175,6 +184,16 @@ def _build_profile(data: Any, source: str) -> Profile:
     if not isinstance(email_tld, str) or not email_tld:
         raise ProfileError(f"{source}: 'email_tld' must be a non-empty string")
 
+    keep_raw = meta.get("keep", [])
+    if not isinstance(keep_raw, list) or not all(
+        isinstance(item, str) and re.fullmatch(r"[^.\s]+\.[^.\s]+", item)
+        for item in keep_raw
+    ):
+        raise ProfileError(
+            f"{source}: 'keep' must be a list of \"table.column\" or \"table.*\""
+        )
+    keep = frozenset(item.lower() for item in keep_raw)
+
     tables_raw = _mapping(data.get("tables", {}), f"{source}: [tables]")
     tables = {table: _parse_table(table, raw) for table, raw in tables_raw.items()}
 
@@ -185,6 +204,7 @@ def _build_profile(data: Any, source: str) -> Profile:
         truncate=truncate,
         email_tld=email_tld,
         tables=tables,
+        keep=keep,
     )
 
 

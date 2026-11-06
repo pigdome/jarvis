@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 
 PII_PATTERN: re.Pattern[str] = re.compile(
-    r"mail|phone|mobile|tel|fax|surname|lastname|firstname|first_name|last_name"
+    r"mail|phone|mobile|(?:^|_)tel(?:_|$)|fax|surname|lastname|firstname|first_name|last_name"
     r"|address|birth|dob|passport|citizen|national|id_card|line_id",
     re.IGNORECASE,
 )

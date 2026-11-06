@@ -16,3 +16,10 @@ def test_detect_pii_names():
 def test_ignore_non_pii_names():
     for column in ("borrowernumber", "biblionumber", "title"):
         assert not looks_like_pii(column), column
+
+
+def test_tel_only_as_a_word():
+    assert looks_like_pii("tel")
+    assert looks_like_pii("home_tel")
+    assert not looks_like_pii("datelastseen")
+    assert not looks_like_pii("hotel_name")

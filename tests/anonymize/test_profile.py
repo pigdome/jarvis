@@ -105,3 +105,33 @@ engine = "mysql"
     )
     with pytest.raises(ProfileError):
         load_profile("koha", path=path)
+
+
+def test_keep_list(tmp_path):
+    path = write_profile(
+        tmp_path,
+        """
+[profile]
+name = "tmp"
+engine = "mysql"
+keep = ["Branches.*", "items.datelastseen"]
+""",
+    )
+    profile = load_profile(path=path)
+    assert profile.keeps("branches", "branchemail")
+    assert profile.keeps("ITEMS", "DateLastSeen")
+    assert not profile.keeps("items", "datelastborrowed")
+
+
+def test_bad_keep_rejected(tmp_path):
+    path = write_profile(
+        tmp_path,
+        """
+[profile]
+name = "tmp"
+engine = "mysql"
+keep = ["branches"]
+""",
+    )
+    with pytest.raises(ProfileError):
+        load_profile(path=path)

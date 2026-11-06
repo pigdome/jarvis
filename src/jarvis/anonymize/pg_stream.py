@@ -222,6 +222,7 @@ class PgRewriter:
         self._tables: dict[str, TableRules] = {
             name.lower(): rules for name, rules in profile.tables.items()
         }
+        self._profile = profile
         self._truncate = {name.lower() for name in profile.truncate}
         self._rule_maps: dict[str, dict[str, Rule]] = {
             name.lower(): {column.lower(): rule for column, rule in rules.columns.items()}
@@ -397,7 +398,7 @@ class PgRewriter:
         for name in columns:
             if name.lower() in self._copy_rule_map:
                 continue
-            if looks_like_pii(name):
+            if looks_like_pii(name) and not self._profile.keeps(lower, name):
                 self.report.suspicious_columns.add((lower, name))
 
         if rules is not None and rules.by_metadata_field:
