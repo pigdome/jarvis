@@ -132,6 +132,33 @@ def anonymize(
 ):
     """
     Replace personal data in a SQL dump (stdin -> stdout) or in a live database.
+
+    \b
+    Two modes:
+      1. Stream (default): read a dump on stdin, write the anonymized dump to
+         stdout. No database is touched until you pipe the output into one.
+      2. Direct (-t and -d): run UPDATE/TRUNCATE in place on a database that
+         is already restored. Asks you to type the DB name (--yes skips).
+
+    \b
+    Examples:
+      # stream: dump -> anonymize -> restore
+      pv koha.sql.gz | gunzip | jarvis db anonymize -p koha | jarvis db mysql koha_spu
+      pv dspace.sql.gz | gunzip | jarvis db anonymize -p dspace | jarvis db psql dspace8_nalt
+      jarvis db anonymize -p koha < dump.sql > anonymized.sql
+
+    \b
+      # direct: edit an already restored database
+      jarvis db anonymize -p koha -t mysql -d koha_spu
+      jarvis db anonymize -p dspace -t psql -d dspace8_spu --dry-run    # print SQL only
+      jarvis db anonymize -p koha -t mysql -d koha_spu --yes            # no prompt
+
+    \b
+      # profiles
+      jarvis db anonymize --list
+      jarvis db anonymize --profile-file ./my-profile.toml < dump.sql > out.sql
+
+    Run under `set -o pipefail` so a failed anonymize stops the restore.
     """
     from rich.console import Console
 
