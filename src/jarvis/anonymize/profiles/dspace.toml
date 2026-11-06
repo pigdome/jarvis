@@ -1,0 +1,59 @@
+# DSpace 7 / 8 / 9 / 10 — PostgreSQL (pg_dump plain, COPY blocks)
+# Source: dspace-api/.../sqlmigration/postgres, checked at tags
+#   dspace-7.6.7, dspace-8.5, dspace-10.1. Tables/columns added in 8–10 are
+#   listed with the version; on older versions they are simply absent.
+#   8.0: ldn_message, notifyservice, qaevent_processed (uuid only)
+#   9.0: requestitem.access_token, registrationdata_metadata
+#   10.0: metadatavalue.security_level, itemupdate_metadata_enhancement (no PII)
+#   10.x crisrp.* researcher-profile names are public, like authors — kept.
+# Keys kept: every uuid PK/FK, handle, doi, metadatavalue.authority.
+# eperson first/last name and phone are NOT columns since DSpace 5: they are
+# metadatavalue rows (schema "eperson"), handled by by_metadata_field below.
+
+[profile]
+name = "dspace"
+engine = "psql"
+description = "DSpace epersons, request-a-copy, ORCID, provenance"
+
+truncate = [
+  "registrationdata",                 # pending sign-ups: email + token
+  "registrationdata_metadata",        # 9.0+: sign-up names etc.
+  "ldn_message",                      # 8.0+: COAR notify JSON, source_ip
+  "orcid_token", "orcid_queue", "orcid_history",
+  "process2bitstream", "process",     # script runs; parameters hold emails
+  "systemwidealert",
+  "webapp",
+]
+
+[tables.eperson]
+email = { strategy = "email", unique = true }
+netid = { strategy = "id", unique = true }
+password = "password"
+salt = "password"
+session_salt = "null"
+
+[tables.requestitem]
+request_email = "email"
+request_name = "name"
+request_message = "text"
+token = { strategy = "id", unique = true }
+access_token = "id"           # 9.0+
+
+[tables.resourcepolicy]
+rpdescription = "text"        # embargo reasons
+
+[tables.versionitem]
+version_summary = "text"
+
+# Rewrites metadatavalue.text_value only for rows whose metadata_field_id
+# resolves to these schema.element[.qualifier] names.
+[tables.metadatavalue.by_metadata_field]
+"eperson.firstname" = "name"
+"eperson.lastname" = "name"
+"eperson.phone" = "phone"
+"eperson.orcid" = "id"
+"dc.description.provenance" = "text"   # "Submitted by <name> (<email>) on …"
+"person.email" = "email"
+"person.telephone" = "phone"
+"person.birthDate" = "date"
+# Kept on purpose: dc.contributor.author, dc.creator (public authorship)

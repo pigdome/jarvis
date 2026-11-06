@@ -1,0 +1,72 @@
+# linebrarian (Django, LINE bot + LIFF) — PostgreSQL
+# Source: /srv/punsarn/linebrarian apps/*/models.py
+# Keys kept: all UUID/int PKs and FKs, order_no, kiosk_user_id.
+
+[profile]
+name = "linebrarian"
+engine = "psql"
+description = "LINE library bot accounts, chats, payments"
+
+truncate = [
+  "django_session",               # holds ThaID pid + names
+  "django_admin_log",
+  "common_actionlog",             # IP, session keys, raw door-check IDs
+  "common_staffsessionmessage",   # chat transcripts
+  "common_questions",
+  "web_patronnotification",
+  "notification_notification",
+]
+
+[tables.account]
+username = { strategy = "id", unique = true }
+credential_hash = "password"
+email = "email"
+display_name = "name"
+first_name = "name"
+last_name = "name"
+phone = "phone"
+student_id = "digits"
+address_registered = "text"
+address_current = "text"
+position = "text"
+service_user_id = "id"        # Alma/Koha patron id
+pid = "null"                  # encrypted national ID
+pid_hash = "null"             # unsalted SHA-256 of national ID
+passport_id = "empty"         # NOT NULL column
+passport_id_hash = "null"
+document_image = "null"       # path to ID-card photo
+kiosk_card_id = "null"        # physical gate credential
+note_1 = "text"
+note_2 = "text"
+staff_note = "text"
+
+[tables.message_handler_lineuser]
+line_id = { strategy = "id", unique = true }
+username = "name"
+
+[tables.staff_session]
+line_id = "id"
+display_name = "name"
+staff_line_id = "id"
+
+[tables.walkin_walkinaccess]
+approved_by = "name"
+
+[tables.payment_paymenttransaction]
+patron_id = "id"
+payment_url = "null"
+raw_response = "json"
+raw_callback = "json"         # ChillPay: CustomerName, CustEmail, PhoneNumber
+extra_data = "json"
+
+[tables.web_booksuggestion]
+note = "text"
+line_id = "id"
+suggestedby = "id"
+
+[tables.auth_user]
+username = { strategy = "id", unique = true }
+password = "password"
+first_name = "name"
+last_name = "name"
+email = "email"

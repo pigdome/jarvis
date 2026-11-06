@@ -1,0 +1,254 @@
+# Koha ILS — MySQL/MariaDB (mysqldump)
+# Source: koha-source/installer/data/mysql/kohastructure.sql (Koha 26.06)
+# Keys kept: borrowernumber and every FK to it, branchcode, categorycode.
+
+[profile]
+name = "koha"
+engine = "mysql"
+description = "Koha ILS patrons, staff, notices, logs"
+
+truncate = [
+  # sessions / tokens / credentials
+  "sessions", "oauth_access_tokens", "api_keys", "borrower_password_recovery",
+  "virtualshelfshares",
+  # full PII copies and caches
+  "borrower_modifications", "tmp_holdsqueue", "pending_offline_operations",
+  # logs and rendered notices
+  "action_logs", "message_queue", "search_history", "linktracker",
+  "saved_reports", "problem_reports",
+  # photos / ID scans (blobs cannot be rewritten)
+  "patronimage", "borrower_files", "misc_files",
+  # catalog-problem tickets: patron-written threads
+  "tickets", "ticket_updates",
+  # statistics with quasi-identifiers
+  "pseudonymized_transactions", "pseudonymized_metadata_values",
+  "pseudonymized_borrower_attributes",
+]
+
+[tables.borrowers]
+cardnumber = { strategy = "digits", unique = true }
+userid = { strategy = "id", unique = true }
+surname = "name"
+firstname = "name"
+preferred_name = "name"
+middle_name = "name"
+othernames = "name"
+initials = "name"
+streetnumber = "digits"
+streettype = "text"
+address = "text"
+address2 = "text"
+city = "text"
+state = "text"
+zipcode = "digits"
+country = "text"
+email = "email"
+emailpro = "email"
+phone = "phone"
+mobile = "phone"
+phonepro = "phone"
+fax = "null"
+B_streetnumber = "digits"
+B_streettype = "text"
+B_address = "text"
+B_address2 = "text"
+B_city = "text"
+B_state = "text"
+B_zipcode = "digits"
+B_country = "text"
+B_email = "email"
+B_phone = "phone"
+dateofbirth = "date"
+debarredcomment = "text"
+contactname = "name"
+contactfirstname = "name"
+borrowernotes = "text"
+opacnote = "text"
+contactnote = "text"
+sort1 = "id"                  # often student/staff ID in Thai sites
+sort2 = "id"
+altcontactfirstname = "name"
+altcontactsurname = "name"
+altcontactaddress1 = "text"
+altcontactaddress2 = "text"
+altcontactaddress3 = "text"
+altcontactstate = "text"
+altcontactzipcode = "digits"
+altcontactcountry = "text"
+altcontactphone = "phone"
+smsalertnumber = "phone"
+password = "password"
+secret = "null"               # 2FA seed
+overdrive_auth_token = "null"
+
+# deletedborrowers: same columns, no unique keys
+[tables.deletedborrowers]
+cardnumber = "digits"
+userid = "id"
+surname = "name"
+firstname = "name"
+preferred_name = "name"
+middle_name = "name"
+othernames = "name"
+initials = "name"
+streetnumber = "digits"
+streettype = "text"
+address = "text"
+address2 = "text"
+city = "text"
+state = "text"
+zipcode = "digits"
+country = "text"
+email = "email"
+emailpro = "email"
+phone = "phone"
+mobile = "phone"
+phonepro = "phone"
+fax = "null"
+B_streetnumber = "digits"
+B_streettype = "text"
+B_address = "text"
+B_address2 = "text"
+B_city = "text"
+B_state = "text"
+B_zipcode = "digits"
+B_country = "text"
+B_email = "email"
+B_phone = "phone"
+dateofbirth = "date"
+debarredcomment = "text"
+contactname = "name"
+contactfirstname = "name"
+borrowernotes = "text"
+opacnote = "text"
+contactnote = "text"
+sort1 = "id"
+sort2 = "id"
+altcontactfirstname = "name"
+altcontactsurname = "name"
+altcontactaddress1 = "text"
+altcontactaddress2 = "text"
+altcontactaddress3 = "text"
+altcontactstate = "text"
+altcontactzipcode = "digits"
+altcontactcountry = "text"
+altcontactphone = "phone"
+smsalertnumber = "phone"
+password = "password"
+secret = "null"
+overdrive_auth_token = "null"
+
+# National ID / passport usually lives here (per-site attribute codes)
+[tables.borrower_attributes]
+attribute = "id"
+[tables.borrower_attributes.unless]
+code = []                     # keep_codes: attribute codes that are NOT PII
+
+[tables.borrower_debarments]
+comment = "text"
+
+[tables.messages]
+message = "text"
+
+[tables.reserves]
+reservenotes = "text"
+
+[tables.old_reserves]
+reservenotes = "text"
+
+[tables.accountlines]
+note = "text"
+
+[tables.suggestions]
+note = "text"
+staff_note = "text"
+reason = "text"
+patronreason = "text"
+# author/title here are the BOOK's author — keep
+
+[tables.illrequests]
+notesopac = "text"
+notesstaff = "text"
+accessurl = "null"
+
+[tables.illcomments]
+comment = "text"
+
+[tables.illrequestattributes]
+value = "text"
+
+[tables.club_enrollment_fields]
+value = "text"
+
+[tables.reviews]
+review = "text"
+
+[tables.housebound_profile]
+fav_itemtypes = "text"
+fav_subjects = "text"
+fav_authors = "text"
+referral = "text"
+notes = "text"
+
+[tables.curbside_pickups]
+notes = "text"
+
+[tables.return_claims]
+notes = "text"
+
+[tables.recalls]
+notes = "text"
+
+[tables.patron_lists]
+name = "text"
+
+[tables.virtualshelves]
+shelfname = "text"
+
+[tables.additional_field_values]
+value = "text"
+[tables.additional_field_values.when]
+record_table = "borrowers"
+
+[tables.saved_sql]
+savedsql = "text"
+notes = "text"
+
+# Vendor sales contacts are natural persons
+[tables.aqcontacts]
+name = "name"
+phone = "phone"
+altphone = "phone"
+fax = "null"
+email = "email"
+notes = "text"
+
+# Credentials — never ship real ones
+[tables.smtp_servers]
+user_name = "null"
+password = "null"
+
+[tables.z3950servers]
+userid = "null"
+password = "null"
+
+[tables.file_transports]
+user_name = "null"
+password = "null"
+key_file = "null"
+
+[tables.identity_providers]
+config = "json"               # OIDC/OAuth client secrets
+
+[tables.erm_usage_data_providers]
+customer_id = "null"
+requestor_id = "null"
+api_key = "null"
+requestor_name = "name"
+requestor_email = "email"
+
+# Vendor portal account (Koha stores the password reversibly encrypted)
+[tables.aqbookseller_interfaces]
+login = "null"
+password = "null"
+account_email = "email"

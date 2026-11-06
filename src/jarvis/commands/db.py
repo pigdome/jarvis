@@ -1,7 +1,9 @@
 import typer
 import subprocess
+import sys
 from jarvis.config import get_secrets, save_secrets
 
+from pathlib import Path
 from typing import Optional
 
 # Removed unused LEGACY_DIR
@@ -105,6 +107,144 @@ def pg_dump(database: str = typer.Argument(..., help="Database name to dump")):
     res = subprocess.run(["sudo", "-u", "postgres", "pg_dump", database])
     if res.returncode != 0:
         raise typer.Exit(res.returncode)
+
+
+@app.command()
+def anonymize(
+    profile: Optional[str] = typer.Option(
+        None, "-p", "--profile", help="Bundled profile name (koha, dspace, …)"
+    ),
+    profile_file: Optional[Path] = typer.Option(
+        None, "--profile-file", help="External profile TOML instead of -p"
+    ),
+    type_: Optional[str] = typer.Option(
+        None, "-t", "--type", help="Database engine for direct mode (mysql|psql)"
+    ),
+    database: Optional[str] = typer.Option(
+        None, "-d", "--database", help="Database to anonymize in place"
+    ),
+    yes: bool = typer.Option(False, "--yes", help="Skip the direct-mode confirmation"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Print direct-mode SQL instead of running it"
+    ),
+    list_: bool = typer.Option(False, "--list", help="List bundled profiles"),
+    quiet: bool = typer.Option(False, "-q", "--quiet", help="Do not print the summary"),
+):
+    """
+    Replace personal data in a SQL dump (stdin -> stdout) or in a live database.
+    """
+    from rich.console import Console
+
+    from jarvis.anonymize.direct import (
+        ConfirmationError,
+        DirectError,
+        run_direct,
+    )
+    from jarvis.anonymize.errors import DumpFormatError, ProfileError
+    from jarvis.anonymize.profile import list_profiles, load_profile
+    from jarvis.anonymize.strategies import Faker
+    from jarvis.anonymize.stream import run_stream
+
+    console = Console(stderr=True)
+
+    if list_:
+        try:
+            profiles = list_profiles()
+        except ProfileError as exc:
+            console.print(str(exc), markup=False, highlight=False)
+            raise typer.Exit(1)
+        for item in profiles:
+            console.print(
+                f"{item.name}  {item.engine}  {item.description}",
+                markup=False,
+                highlight=False,
+            )
+        raise typer.Exit(0)
+
+    try:
+        if profile is not None and profile_file is not None:
+            raise ProfileError("pass either --profile or --profile-file, not both")
+        if profile is None and profile_file is None:
+            raise ProfileError("pass --profile NAME or --profile-file PATH")
+        loaded = (
+            load_profile(profile)
+            if profile is not None
+            else load_profile(path=profile_file)
+        )
+    except ProfileError as exc:
+        console.print(str(exc), markup=False, highlight=False)
+        raise typer.Exit(1)
+
+    if type_ is not None or database is not None:
+        if type_ is None or database is None:
+            console.print(
+                "direct mode needs both -t/--type and -d/--database",
+                markup=False,
+                highlight=False,
+            )
+            raise typer.Exit(1)
+        if type_ != loaded.engine:
+            console.print(
+                f"profile {loaded.name!r} is for engine {loaded.engine!r}, not {type_!r}",
+                markup=False,
+                highlight=False,
+            )
+            raise typer.Exit(1)
+        try:
+            direct_report = run_direct(
+                loaded,
+                type_,
+                database,
+                dry_run=dry_run,
+                assume_yes=yes,
+                out=sys.stdout,
+            )
+        except ProfileError as exc:
+            console.print(str(exc), markup=False, highlight=False)
+            raise typer.Exit(1)
+        except ConfirmationError as exc:
+            console.print(str(exc), markup=False, highlight=False)
+            raise typer.Exit(1)
+        except DirectError as exc:
+            console.print(
+                f"anonymize failed: {exc}", markup=False, highlight=False
+            )
+            raise typer.Exit(3)
+
+        if not quiet and not dry_run:
+            direct_report.render(console)
+        return
+
+    if sys.stdin.isatty():
+        console.print(
+            "refusing to read a dump from a terminal; pipe one in, for example:",
+            markup=False,
+            highlight=False,
+        )
+        console.print(
+            "  pv dump.sql.gz | gunzip | jarvis db anonymize -p koha"
+            " | jarvis db mysql koha_spu",
+            markup=False,
+            highlight=False,
+        )
+        raise typer.Exit(1)
+
+    faker = Faker(email_tld=loaded.email_tld)
+    try:
+        report = run_stream(loaded, sys.stdin.buffer, sys.stdout.buffer, faker)
+    except DumpFormatError as exc:
+        console.print(
+            f"anonymize failed: {exc}", markup=False, highlight=False
+        )
+        console.print(
+            "Hint: run the pipeline with 'set -o pipefail'",
+            markup=False,
+            highlight=False,
+        )
+        raise typer.Exit(2)
+
+    if not quiet:
+        report.render(console)
 
 
 @app.command()

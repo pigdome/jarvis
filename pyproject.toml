@@ -1,6 +1,6 @@
 [project]
 name = "jarvis-cli"
-version = "3.0.27"
+version = "3.0.28"
 description = "JARVIS - Tools for life hack"
 authors = [
     {name = "Apirak", email = "apirak@punsarn.asia"}
@@ -13,6 +13,9 @@ dependencies = [
 
 [project.scripts]
 jarvis = "jarvis.main:app"
+
+[tool.setuptools.package-data]
+"jarvis.anonymize" = ["profiles/*.toml", "profiles/*.md"]
 
 [build-system]
 requires = ["setuptools>=61.0"]

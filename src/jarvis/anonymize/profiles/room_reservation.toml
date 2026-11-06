@@ -1,0 +1,51 @@
+# room-reservation (Django 5.2) — PostgreSQL
+# Source: /srv/punsarn/room-reservation booking/models.py, api/models.py
+# No db_table overrides: tables are <app>_<model>.
+# Keys kept: all UUID/int PKs and FKs. NOTE booking_patron.patron_id is a
+# varchar business key; booking_booking.patron_id etc. are uuid FKs.
+
+[profile]
+name = "room_reservation"
+engine = "psql"
+description = "Room booking patrons, bookings, logs"
+
+truncate = [
+  "django_session",           # passcodes, card numbers in session data
+  "django_admin_log",         # object_repr = "<name> (<patron_id>)"
+  "booking_actionlog",        # names in description, IP, JSON details
+  "booking_bookinginvite",    # live invite tokens
+  "api_apiclient",            # live API key hashes
+]
+
+[tables.auth_user]
+username = { strategy = "id", unique = true }
+password = "password"
+first_name = "name"
+last_name = "name"
+email = "email"
+
+[tables.booking_patron]
+patron_id = { strategy = "id", unique = true }   # may be national ID (Alma primary_id)
+cardnumber = "digits"
+name = "name"
+email = "email"
+phone = "phone"
+organization = "text"
+
+[tables.booking_booking]
+phone = "phone"
+reason_description = "text"
+attendance_list = "json"      # [{"id": patron_id, "name": ...}]
+passcode = "null"             # door access codes
+passcode_pin = "null"
+
+[tables.booking_room]
+qr_code_token = { strategy = "id", unique = true }   # printed check-in URLs
+
+[tables.booking_suspension]
+reason = "text"
+
+[tables.booking_paymenttransaction]
+raw_response = "json"
+raw_callback = "json"
+payment_url = "null"
