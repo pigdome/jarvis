@@ -147,6 +147,7 @@ docker run --rm -v "$JARVIS_DIR":/repo -w /repo debian:10 bash -lc '
         --add-data "config/authorized_keys:config" \
         --add-data "module:module" \
         --add-data "lib:lib" \
+        --add-data "src/jarvis/anonymize/profiles:jarvis/anonymize/profiles" \
         --clean \
         src/jarvis/main.py
 
